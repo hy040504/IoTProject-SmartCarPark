@@ -5,6 +5,42 @@ Wemos D1 R1 기반의 스마트 주차장 프로젝트입니다.
 
 ---
 
+## 🧠 현재 보드 구성
+
+현재 보유한 보드 수를 기준으로 기능을 나눴습니다.
+
+| 보드 | 업로드할 스케치 | 담당 역할 |
+| --- | --- | --- |
+| Arduino Uno 1 | `sketches/uno_gate/uno_gate.ino` | 입구 조도센서, 차단기 통과 감지, LCD, 서보모터, 만차 경고 |
+| Arduino Uno 2 | `sketches/uno_slots/uno_slots.ino` | 주차칸 2개 초음파센서, 칸별 빨간/초록 LED |
+| Wemos D1 R1 1 | `sketches/wemos_gateway/wemos_gateway.ino` | Uno 보드 이벤트 수신, 요금 서버 GET 요청, 요금 응답 중계 |
+| Wemos D1 R1 2 | `sketches/wemos_monitor/wemos_monitor.ino` | 요금 서버 상태 확인용 보조 모니터 |
+
+`led.ino`는 README 같은 문서가 아니라 Arduino 스케치 파일입니다. 다만 지금 프로젝트는 보드별 스케치로 나뉘었기 때문에, 루트의 `led.ino`는 잘못 업로드했을 때 안내 메시지만 출력하는 보조 스케치로 남겨뒀습니다.
+
+---
+
+## 🔁 보드 간 통신 구조
+
+```text
+Arduino Uno 2: 주차칸 감지
+  └─ ENTRY,1 / VACATED,1 같은 문자열 전송
+      ↓ SoftwareSerial
+Wemos D1 R1 1: 요금 게이트웨이
+  ├─ /parking/entry?slot=1 요청
+  ├─ 출차 대기 슬롯 저장
+  └─ 차단기 통과 이벤트 수신 시 /parking/exit?slot=1 요청
+      ↓ SoftwareSerial
+Arduino Uno 1: 입구/차단기/LCD
+  ├─ EMPTY,n 수신 후 입차 가능 여부 판단
+  ├─ BARRIER_EXIT 전송
+  └─ FEE,slot,fee 수신 후 LCD에 요금 표시
+```
+
+핵심은 **Uno는 센서와 장치 제어**, **Wemos는 Wi-Fi와 서버 통신**을 맡는 구조입니다.
+
+---
+
 ## ✨ 핵심 기능
 
 | 기능 | 설명 |
@@ -135,6 +171,15 @@ Wemos D1 R1 기반의 스마트 주차장 프로젝트입니다.
 ```text
 led/
 ├── led.ino
+├── sketches/
+│   ├── uno_gate/
+│   │   └── uno_gate.ino
+│   ├── uno_slots/
+│   │   └── uno_slots.ino
+│   ├── wemos_gateway/
+│   │   └── wemos_gateway.ino
+│   └── wemos_monitor/
+│       └── wemos_monitor.ino
 ├── 차단기/
 │   ├── barrier.h
 │   └── entrance_sensor.h
@@ -156,7 +201,11 @@ led/
 
 | 파일 | 담당 기능 |
 | --- | --- |
-| `led.ino` | 전체 시스템 흐름 제어 |
+| `led.ino` | 보드별 스케치 사용 안내용 루트 스케치 |
+| `sketches/uno_gate/uno_gate.ino` | 입구/차단기/LCD/만차 경고 제어 |
+| `sketches/uno_slots/uno_slots.ino` | 주차칸 감지와 칸별 LED 제어 |
+| `sketches/wemos_gateway/wemos_gateway.ino` | Uno 이벤트와 요금 서버 사이의 게이트웨이 |
+| `sketches/wemos_monitor/wemos_monitor.ino` | 요금 서버 상태 확인용 보조 모니터 |
 | `차단기/entrance_sensor.h` | 입구 조도센서 감지, 차단기 통과 감지 함수 제공 |
 | `차단기/barrier.h` | 서보모터 기반 차단기 열림/닫힘 |
 | `주차칸/parking_slots.h` | 주차칸 2개 상태 확인, 칸별 LED 제어, 입차/출차 대기 처리 |
@@ -338,7 +387,14 @@ const char FEE_SERVER_BASE_URL[] = "http://192.168.0.10:3000";
 
 ### 3. Arduino 업로드
 
-Arduino IDE에서 Wemos D1 R1 보드를 선택한 뒤 `led.ino`를 업로드합니다.
+보드별로 아래 스케치를 각각 업로드합니다.
+
+| 보드 | Arduino IDE 보드 선택 | 업로드 파일 |
+| --- | --- | --- |
+| Arduino Uno 1 | Arduino Uno | `sketches/uno_gate/uno_gate.ino` |
+| Arduino Uno 2 | Arduino Uno | `sketches/uno_slots/uno_slots.ino` |
+| Wemos D1 R1 1 | LOLIN(WeMos) D1 R1 | `sketches/wemos_gateway/wemos_gateway.ino` |
+| Wemos D1 R1 2 | LOLIN(WeMos) D1 R1 | `sketches/wemos_monitor/wemos_monitor.ino` |
 
 ---
 
@@ -382,5 +438,8 @@ Arduino IDE에서 Wemos D1 R1 보드를 선택한 뒤 `led.ino`를 업로드합�
 
 - Node.js 서버 문법 확인 완료
 - Express 서버 GET 요청 테스트 완료
-- 영어 폴더명 기준 Arduino CLI `1.5.1` / Wemos D1 R1 보드(`esp8266:esp8266:d1`) 컴파일 완료
-- 한글 폴더명 기준 Arduino CLI 컴파일은 ESP8266 빌드 과정의 include 경로 인코딩 문제로 실패 확인
+- `sketches/uno_gate` Arduino Uno 컴파일 완료
+- `sketches/uno_slots` Arduino Uno 컴파일 완료
+- `sketches/wemos_gateway` Wemos D1 R1 컴파일 완료
+- `sketches/wemos_monitor` Wemos D1 R1 컴파일 완료
+- 한글 폴더명을 include하는 기존 통합 구조는 ESP8266 빌드 과정의 경로 인코딩 문제로 실패 확인

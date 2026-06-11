@@ -1,55 +1,16 @@
-#include "차단기/barrier.h"
-#include "차단기/entrance_sensor.h"
-#include "주차칸/parking_alert.h"
-#include "주차칸/parking_display.h"
-#include "주차칸/parking_slots.h"
-
 /**
- * 주차장 감지 시스템을 시작한다.
+ * 루트 스케치가 잘못 업로드됐을 때 보드별 스케치 위치를 안내한다.
  * @returns {void} 반환값 없음
  */
 void setup() {
   Serial.begin(9600);
-  setupParkingFeeClient();
-  setupEntranceSensor();
-  setupParkingDisplay();
-  setupParkingAlert();
-  setupParkingSlots();
-  setupBarrier();
+  Serial.println("보드별 sketches 폴더의 .ino 파일을 업로드하세요.");
 }
 
 /**
- * 주차 공간 상태를 반복 측정하고 LED 표시를 갱신한다.
+ * 루트 스케치는 실제 주차장 제어를 수행하지 않는다.
  * @returns {void} 반환값 없음
  */
 void loop() {
-  bool entranceVehicleDetected = isEntranceVehicleDetected();
-  bool barrierVehicleDetected = isBarrierVehicleDetected();
-  int emptySlots = countEmptySlots();
-
-  updateParkingSlots();
-  bool exitFeeDisplayed = confirmPendingExitAtBarrier(barrierVehicleDetected);
-
-  if (exitFeeDisplayed) {
-    turnOffParkingFullAlert();
-    openBarrier();
-  } else if (entranceVehicleDetected && emptySlots > 0) {
-    showGateOpenMessage(emptySlots);
-    turnOffParkingFullAlert();
-    openBarrier();
-  } else if (entranceVehicleDetected && emptySlots == 0) {
-    showParkingFullMessage();
-    turnOnParkingFullAlert();
-    closeBarrier();
-  } else {
-    turnOffParkingFullAlert();
-    closeBarrier();
-  }
-
-  Serial.print("Entrance: ");
-  Serial.print(entranceVehicleDetected ? "YES" : "NO");
-  Serial.print(", Empty Slots: ");
-  Serial.println(emptySlots);
-
-  delay(300);
+  delay(1000);
 }
