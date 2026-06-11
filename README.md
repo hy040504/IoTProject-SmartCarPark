@@ -16,7 +16,7 @@ Wemos D1 R1 기반의 스마트 주차장 프로젝트입니다.
 | Wemos D1 R1 1 | `sketches/wemos_gateway/wemos_gateway.ino` | Uno 보드 이벤트 수신, 요금 서버 GET 요청, 요금 응답 중계 |
 | Wemos D1 R1 2 | `sketches/wemos_monitor/wemos_monitor.ino` | 요금 서버 상태 확인용 보조 모니터 |
 
-`led.ino`는 README 같은 문서가 아니라 Arduino 스케치 파일입니다. 다만 지금 프로젝트는 보드별 스케치로 나뉘었기 때문에, 루트의 `led.ino`는 잘못 업로드했을 때 안내 메시지만 출력하는 보조 스케치로 남겨뒀습니다.
+루트 폴더에는 통합 실행용 `.ino` 파일을 두지 않습니다. 실제 업로드 대상은 `sketches/` 아래의 보드별 `.ino` 파일이며, 루트의 `BOARD_UPLOAD_GUIDE.md`는 어떤 파일을 어느 보드에 업로드해야 하는지 안내합니다.
 
 ---
 
@@ -170,7 +170,7 @@ Arduino Uno 1: 입구/차단기/LCD
 
 ```text
 led/
-├── led.ino
+├── BOARD_UPLOAD_GUIDE.md
 ├── sketches/
 │   ├── uno_gate/
 │   │   └── uno_gate.ino
@@ -201,7 +201,7 @@ led/
 
 | 파일 | 담당 기능 |
 | --- | --- |
-| `led.ino` | 보드별 스케치 사용 안내용 루트 스케치 |
+| `BOARD_UPLOAD_GUIDE.md` | 보드별 업로드 대상 안내 |
 | `sketches/uno_gate/uno_gate.ino` | 입구/차단기/LCD/만차 경고 제어 |
 | `sketches/uno_slots/uno_slots.ino` | 주차칸 감지와 칸별 LED 제어 |
 | `sketches/wemos_gateway/wemos_gateway.ino` | Uno 이벤트와 요금 서버 사이의 게이트웨이 |

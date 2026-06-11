@@ -16,8 +16,9 @@
 - Wemos D1 R1 1: sketches/wemos_gateway/wemos_gateway.ino 업로드, Uno 이벤트와 요금 서버 사이의 게이트웨이 담당
 - Wemos D1 R1 2: sketches/wemos_monitor/wemos_monitor.ino 업로드, 서버 상태 모니터링 담당
 
-루트의 led.ino는 실제 통합 실행 파일이 아니라 보드별 스케치 사용을 안내하는 보조 스케치이다.
+루트에는 통합 실행용 ino 파일을 두지 않는다.
 프로젝트가 4개 보드로 나뉘면서 실제 업로드 대상은 sketches 폴더 안의 보드별 ino 파일이다.
+BOARD_UPLOAD_GUIDE.md는 각 보드에 어떤 스케치를 업로드해야 하는지 안내하는 문서이다.
 
 1) 입구 차량 감지
 - 조도센서가 입구 차량 접근을 감지한다.
@@ -32,7 +33,7 @@
 3) 입차 가능 판단
 - 입구에 차량이 있고 빈자리가 1개 이상이면 LCD에 Gate Open을 표시한다.
 - 만차 경고 LED/부저를 끄고, 서보모터를 90도로 이동시켜 차단기를 연다.
-- 이 흐름은 led.ino의 loop()에서 처리한다.
+- 이 흐름은 sketches/uno_gate/uno_gate.ino의 loop()에서 처리한다.
 
 4) 만차 처리
 - 입구에 차량이 있고 빈자리가 없으면 LCD에 Parking Full을 표시한다.
@@ -55,10 +56,9 @@
 
 3. 주요 파일 설명
 
-led.ino
-- Arduino 메인 스케치 파일이다.
-- setup()에서 Wi-Fi, 센서, LCD, 경고 장치, 주차칸, 차단기를 초기화한다.
-- loop()에서 입구 감지, 주차칸 상태 확인, 만차 처리, 차단기 제어, 출차 확정 로직을 반복 실행한다.
+BOARD_UPLOAD_GUIDE.md
+- 보드별 업로드 대상 스케치를 안내하는 문서이다.
+- 루트에는 실행용 ino 파일을 두지 않고, sketches 폴더의 보드별 ino 파일을 사용한다.
 
 차단기/entrance_sensor.h
 - 조도센서 입력을 담당한다.
