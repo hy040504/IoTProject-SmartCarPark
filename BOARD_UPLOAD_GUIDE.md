@@ -10,3 +10,11 @@
 | Wemos D1 R1 2 | `sketches/wemos_monitor/wemos_monitor.ino` | 서버 상태 모니터링 |
 
 Arduino IDE에서 각 스케치 폴더를 열어 해당 보드에 각각 업로드하면 됩니다.
+
+## 테스트용 스케치
+
+| 보드 | 업로드할 파일 | 테스트 대상 |
+| --- | --- | --- |
+| Arduino Uno 1 | `sketches/uno_gate_test/uno_gate_test.ino` | 입구 조도센서, 출구 조도센서, LCD, 입구 서보, 출구 서보 |
+
+아직 Wemos나 주차칸 센서를 연결하지 않은 상태에서는 `uno_gate_test.ino`를 먼저 업로드해서 현재 부착한 부품만 확인하면 됩니다.

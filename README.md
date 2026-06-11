@@ -425,6 +425,14 @@ const char FEE_SERVER_BASE_URL[] = "http://192.168.0.10:3000";
 | Wemos D1 R1 1 | LOLIN(WeMos) D1 R1 | `sketches/wemos_gateway/wemos_gateway.ino` |
 | Wemos D1 R1 2 | LOLIN(WeMos) D1 R1 | `sketches/wemos_monitor/wemos_monitor.ino` |
 
+현재 입구/출구 조도센서, LCD, 입구/출구 차단기 서보만 연결한 상태라면 아래 테스트 스케치를 먼저 업로드합니다.
+
+```text
+sketches/uno_gate_test/uno_gate_test.ino
+```
+
+테스트 스케치는 시리얼 모니터와 LCD에 입구/출구 조도값을 출력하고, 조도값이 기준 이하로 내려가면 해당 차단기 서보만 열었다가 자동으로 닫습니다.
+
 ---
 
 ## 📟 LCD 표시 상태
