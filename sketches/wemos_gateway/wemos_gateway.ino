@@ -3,21 +3,21 @@
 #include <ESP8266WiFi.h>
 #include <SoftwareSerial.h>
 
-const char WIFI_SSID[] = "YOUR_WIFI_SSID";
-const char WIFI_PASSWORD[] = "YOUR_WIFI_PASSWORD";
-const char FEE_SERVER_BASE_URL[] = "http://192.168.0.10:3000";
+const char WIFI_SSID[] = "YOUR_WIFI_SSID";                 // 접속할 Wi-Fi 이름
+const char WIFI_PASSWORD[] = "YOUR_WIFI_PASSWORD";         // 접속할 Wi-Fi 비밀번호
+const char FEE_SERVER_BASE_URL[] = "http://192.168.0.10:3000"; // 요금 서버 기본 주소
 
-const int GATE_RX_PIN = D5;
-const int GATE_TX_PIN = D6;
-const int SLOT_RX_PIN = D7;
-const int SLOT_TX_PIN = D8;
-const int SLOT_COUNT = 2;
+const int GATE_RX_PIN = D5;       // 차단기 Uno 송신선을 받는 핀
+const int GATE_TX_PIN = D6;       // 차단기 Uno 수신선으로 보내는 핀
+const int SLOT_RX_PIN = D7;       // 주차칸 Uno 송신선을 받는 핀
+const int SLOT_TX_PIN = D8;       // 주차칸 Uno 수신선으로 보내는 핀
+const int SLOT_COUNT = 2;         // 관리할 주차칸 개수
 
-SoftwareSerial gateSerial(GATE_RX_PIN, GATE_TX_PIN);
-SoftwareSerial slotSerial(SLOT_RX_PIN, SLOT_TX_PIN);
+SoftwareSerial gateSerial(GATE_RX_PIN, GATE_TX_PIN); // 차단기 Uno 통신 포트
+SoftwareSerial slotSerial(SLOT_RX_PIN, SLOT_TX_PIN); // 주차칸 Uno 통신 포트
 
-bool slotOccupied[SLOT_COUNT] = {false, false};
-int pendingExitSlotId = 0;
+bool slotOccupied[SLOT_COUNT] = {false, false}; // 서버 전송 기준 주차칸 점유 상태
+int pendingExitSlotId = 0;                      // 차단기 통과를 기다리는 출차 칸 번호
 
 /**
  * Wi-Fi 연결을 초기화한다.

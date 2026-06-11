@@ -2,27 +2,27 @@
 #include <Servo.h>
 #include <SoftwareSerial.h>
 
-const int WEMOS_RX_PIN = 2;
-const int WEMOS_TX_PIN = 3;
-const int ENTRANCE_LIGHT_PIN = A0;
-const int BARRIER_EXIT_LIGHT_PIN = A1;
-const int SERVO_PIN = 9;
-const int FULL_ALERT_LED_PIN = 12;
-const int FULL_ALERT_BUZZER_PIN = 11;
+const int WEMOS_RX_PIN = 2;             // Wemos 송신선을 받는 핀
+const int WEMOS_TX_PIN = 3;             // Wemos 수신선으로 보내는 핀
+const int ENTRANCE_LIGHT_PIN = A0;      // 입구 차량 감지 조도센서 핀
+const int BARRIER_EXIT_LIGHT_PIN = A1;  // 출차 통과 감지 조도센서 핀
+const int SERVO_PIN = 9;                // 차단기 서보모터 제어 핀
+const int FULL_ALERT_LED_PIN = 12;      // 만차 경고 LED 핀
+const int FULL_ALERT_BUZZER_PIN = 11;   // 만차 경고 부저 핀
 
-const int LIGHT_BLOCKED_THRESHOLD = 450;
-const int BARRIER_CLOSED_ANGLE = 0;
-const int BARRIER_OPEN_ANGLE = 90;
-const unsigned long GATE_OPEN_TIME_MS = 3000;
+const int LIGHT_BLOCKED_THRESHOLD = 450;      // 차량 그림자로 판단할 조도 기준
+const int BARRIER_CLOSED_ANGLE = 0;           // 차단기 닫힘 각도
+const int BARRIER_OPEN_ANGLE = 90;            // 차단기 열림 각도
+const unsigned long GATE_OPEN_TIME_MS = 3000; // 차단기 자동 닫힘 대기 시간
 
-SoftwareSerial wemosSerial(WEMOS_RX_PIN, WEMOS_TX_PIN);
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-Servo barrierServo;
+SoftwareSerial wemosSerial(WEMOS_RX_PIN, WEMOS_TX_PIN); // Wemos 게이트웨이 통신 포트
+LiquidCrystal_I2C lcd(0x27, 16, 2);                     // 주차장 상태 표시 LCD
+Servo barrierServo;                                     // 차단기 제어 서보 객체
 
-int cachedEmptySlots = 2;
-bool previousEntranceDetected = false;
-bool previousExitDetected = false;
-unsigned long gateOpenedAt = 0;
+int cachedEmptySlots = 2;                  // Wemos에서 마지막으로 받은 빈자리 수
+bool previousEntranceDetected = false;     // 입구 감지 중복 처리 방지 상태
+bool previousExitDetected = false;         // 출차 감지 중복 처리 방지 상태
+unsigned long gateOpenedAt = 0;            // 차단기를 연 시각
 
 /**
  * LCD 두 줄에 주차장 상태 메시지를 출력한다.

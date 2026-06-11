@@ -1,18 +1,18 @@
 #include <SoftwareSerial.h>
 
-const int WEMOS_RX_PIN = 2;
-const int WEMOS_TX_PIN = 3;
-const int SLOT_COUNT = 2;
-const int SLOT_OCCUPIED_DISTANCE_CM = 5;
-const unsigned long ECHO_TIMEOUT_US = 30000;
+const int WEMOS_RX_PIN = 2;                  // Wemos 송신선을 받는 핀
+const int WEMOS_TX_PIN = 3;                  // Wemos 수신선으로 보내는 핀
+const int SLOT_COUNT = 2;                    // 관리할 주차칸 개수
+const int SLOT_OCCUPIED_DISTANCE_CM = 5;     // 차량으로 판단할 최대 거리
+const unsigned long ECHO_TIMEOUT_US = 30000; // 초음파 응답 대기 최대 시간
 
-const int SLOT_TRIG_PINS[SLOT_COUNT] = {4, 6};
-const int SLOT_ECHO_PINS[SLOT_COUNT] = {5, 7};
-const int SLOT_RED_LED_PINS[SLOT_COUNT] = {8, 10};
-const int SLOT_GREEN_LED_PINS[SLOT_COUNT] = {9, 11};
+const int SLOT_TRIG_PINS[SLOT_COUNT] = {4, 6};       // 주차칸별 초음파 송신 핀
+const int SLOT_ECHO_PINS[SLOT_COUNT] = {5, 7};       // 주차칸별 초음파 수신 핀
+const int SLOT_RED_LED_PINS[SLOT_COUNT] = {8, 10};   // 주차칸별 점유 표시 LED 핀
+const int SLOT_GREEN_LED_PINS[SLOT_COUNT] = {9, 11}; // 주차칸별 빈자리 표시 LED 핀
 
-SoftwareSerial wemosSerial(WEMOS_RX_PIN, WEMOS_TX_PIN);
-bool previousOccupied[SLOT_COUNT] = {false, false};
+SoftwareSerial wemosSerial(WEMOS_RX_PIN, WEMOS_TX_PIN); // Wemos 게이트웨이 통신 포트
+bool previousOccupied[SLOT_COUNT] = {false, false};     // 주차칸 상태 변화 감지용 이전 상태
 
 /**
  * 지정한 주차칸의 초음파 거리를 센티미터 단위로 측정한다.
