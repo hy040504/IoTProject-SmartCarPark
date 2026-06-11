@@ -243,6 +243,27 @@ led/
 
 ---
 
+## 🖼️ 회로도
+
+### Arduino Uno 1: 입구/출구 차단기 제어
+
+아래 회로도는 `sketches/uno_gate/uno_gate.ino` 기준입니다.
+
+![Arduino Uno 1 회로도](docs/circuits/arduino_uno_1_gate.svg)
+
+포함된 연결:
+
+- 입구 조도센서: `A0`
+- 출구 조도센서: `A1`
+- 입구 차단기 서보모터: `D9`
+- 출구 차단기 서보모터: `D10`
+- 만차 경고 부저: `D11`
+- 만차 경고 LED: `D12`
+- I2C LCD: `A4(SDA)`, `A5(SCL)`
+- Wemos Gateway 통신: `D2`, `D3`
+
+---
+
 ## 🧰 사용 재료
 
 ### 필수 부품
