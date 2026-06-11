@@ -428,7 +428,7 @@ const char FEE_SERVER_BASE_URL[] = "http://192.168.0.10:3000";
 현재 입구/출구 조도센서, LCD, 입구/출구 차단기 서보만 연결한 상태라면 아래 테스트 스케치를 먼저 업로드합니다.
 
 ```text
-sketches/uno_gate_test/uno_gate_test.ino
+sketches/test/uno_gate_test/uno_gate_test.ino
 ```
 
 테스트 스케치는 시리얼 모니터와 LCD에 입구/출구 조도값을 출력하고, 조도값이 기준 이하로 내려가면 해당 차단기 서보만 열었다가 자동으로 닫습니다.
@@ -436,10 +436,10 @@ sketches/uno_gate_test/uno_gate_test.ino
 부팅 메시지만 나오고 조도값 로그가 더 이상 나오지 않으면 LCD 초기화에서 멈췄을 가능성이 큽니다. 이때는 아래 순서로 분리 테스트합니다.
 
 ```text
-1. sketches/uno_gate_no_lcd_test/uno_gate_no_lcd_test.ino
+1. sketches/test/uno_gate_no_lcd_test/uno_gate_no_lcd_test.ino
    LCD 없이 조도센서와 서보만 테스트
 
-2. sketches/uno_i2c_scanner/uno_i2c_scanner.ino
+2. sketches/test/uno_i2c_scanner/uno_i2c_scanner.ino
    LCD I2C 주소와 배선 확인
 ```
 

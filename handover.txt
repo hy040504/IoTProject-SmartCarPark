@@ -150,7 +150,7 @@ Arduino IDE 또는 arduino-cli에서 각 보드에 맞는 스케치를 업로드
 - Wemos D1 R1 2: sketches/wemos_monitor/wemos_monitor.ino
 
 부분 테스트:
-- 현재 입구 조도센서, 출구 조도센서, LCD, 입구 차단기 서보, 출구 차단기 서보만 연결한 상태에서는 sketches/uno_gate_test/uno_gate_test.ino를 먼저 업로드한다.
+- 현재 입구 조도센서, 출구 조도센서, LCD, 입구 차단기 서보, 출구 차단기 서보만 연결한 상태에서는 sketches/test/uno_gate_test/uno_gate_test.ino를 먼저 업로드한다.
 - 해당 테스트 스케치는 Wemos 통신이나 주차칸 센서 없이 조도값 출력과 서보 열림/닫힘만 확인한다.
 
 7. 검증 결과
