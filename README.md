@@ -251,6 +251,10 @@ led/
 
 ![Arduino Uno 1 회로도](docs/circuits/arduino_uno_1_gate.svg)
 
+조립할 때는 아래 상세 브레드보드 배선도를 기준으로 연결하면 됩니다.
+
+![Arduino Uno 1 브레드보드 상세 회로도](docs/circuits/arduino_uno_1_gate_breadboard.svg)
+
 포함된 연결:
 
 - 입구 조도센서: `A0`

@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1250" viewBox="0 0 1800 1250">
+  <style>
+    .title { font: 700 34px Arial, sans-serif; fill: #162033; }
+    .subtitle { font: 18px Arial, sans-serif; fill: #526070; }
+    .label { font: 700 17px Arial, sans-serif; fill: #162033; }
+    .text { font: 15px Arial, sans-serif; fill: #253044; }
+    .small { font: 12px Arial, sans-serif; fill: #526070; }
+    .tiny { font: 10px Arial, sans-serif; fill: #5f6b7a; }
+    .board { fill: #fff; stroke: #263238; stroke-width: 2; rx: 12; }
+    .uno { fill: #2f80ed; stroke: #114a8b; stroke-width: 3; rx: 16; }
+    .module { fill: #f8fbff; stroke: #263238; stroke-width: 2; rx: 10; }
+    .note { fill: #fff8d6; stroke: #b58900; stroke-width: 2; rx: 8; }
+    .hole { fill: #d9e2ec; stroke: #8fa1b3; stroke-width: 1; }
+    .rail-red { fill: #ffe8e8; stroke: #c62828; stroke-width: 2; }
+    .rail-blue { fill: #e8f0ff; stroke: #174ea6; stroke-width: 2; }
+    .red { stroke: #d93025; stroke-width: 4; fill: none; }
+    .black { stroke: #202124; stroke-width: 4; fill: none; }
+    .blue { stroke: #1a73e8; stroke-width: 4; fill: none; }
+    .green { stroke: #0f9d58; stroke-width: 4; fill: none; }
+    .purple { stroke: #9334e6; stroke-width: 4; fill: none; }
+    .orange { stroke: #f29900; stroke-width: 4; fill: none; }
+    .thin { stroke-width: 2.5; }
+  </style>
+
+  <rect width="1800" height="1250" fill="#eef3f8"/>
+  <text x="50" y="55" class="title">Arduino Uno 1 브레드보드 배선도</text>
+  <text x="50" y="85" class="subtitle">입구/출구 조도센서, 입구/출구 서보 차단기, LCD, 만차 LED/부저, Wemos Gateway 통신</text>
+
+  <!-- Arduino Uno -->
+  <rect x="55" y="150" width="330" height="520" class="uno"/>
+  <text x="110" y="205" font-family="Arial" font-size="34" font-weight="700" fill="#fff">Arduino UNO</text>
+  <text x="102" y="235" font-family="Arial" font-size="15" fill="#dceeff">sketches/uno_gate/uno_gate.ino</text>
+
+  <g>
+    <circle cx="355" cy="285" r="8" fill="#fff"/><text x="292" y="290" class="text">5V</text>
+    <circle cx="355" cy="320" r="8" fill="#fff"/><text x="292" y="325" class="text">GND</text>
+    <circle cx="355" cy="360" r="8" fill="#fff"/><text x="292" y="365" class="text">A0</text>
+    <circle cx="355" cy="395" r="8" fill="#fff"/><text x="292" y="400" class="text">A1</text>
+    <circle cx="355" cy="430" r="8" fill="#fff"/><text x="275" y="435" class="text">A4 SDA</text>
+    <circle cx="355" cy="465" r="8" fill="#fff"/><text x="275" y="470" class="text">A5 SCL</text>
+    <circle cx="355" cy="520" r="8" fill="#fff"/><text x="292" y="525" class="text">D2</text>
+    <circle cx="355" cy="555" r="8" fill="#fff"/><text x="292" y="560" class="text">D3</text>
+    <circle cx="355" cy="590" r="8" fill="#fff"/><text x="292" y="595" class="text">D9</text>
+    <circle cx="355" cy="625" r="8" fill="#fff"/><text x="284" y="630" class="text">D10</text>
+  </g>
+  <g>
+    <circle cx="85" cy="555" r="8" fill="#fff"/><text x="105" y="560" class="text">D11</text>
+    <circle cx="85" cy="590" r="8" fill="#fff"/><text x="105" y="595" class="text">D12</text>
+  </g>
+
+  <!-- Breadboard -->
+  <rect x="440" y="140" width="860" height="620" class="board"/>
+  <text x="770" y="175" class="label">브레드보드</text>
+
+  <!-- power rails -->
+  <rect x="480" y="205" width="780" height="22" class="rail-red"/>
+  <rect x="480" y="235" width="780" height="22" class="rail-blue"/>
+  <text x="455" y="221" class="label">+</text>
+  <text x="455" y="251" class="label">-</text>
+  <rect x="480" y="665" width="780" height="22" class="rail-red"/>
+  <rect x="480" y="695" width="780" height="22" class="rail-blue"/>
+  <text x="455" y="681" class="label">+</text>
+  <text x="455" y="711" class="label">-</text>
+
+  <!-- grid labels -->
+  <g>
+    <text x="500" y="290" class="small">A</text><text x="500" y="325" class="small">B</text><text x="500" y="360" class="small">C</text><text x="500" y="395" class="small">D</text><text x="500" y="430" class="small">E</text>
+    <text x="500" y="505" class="small">F</text><text x="500" y="540" class="small">G</text><text x="500" y="575" class="small">H</text><text x="500" y="610" class="small">I</text><text x="500" y="645" class="small">J</text>
+  </g>
+
+  <!-- holes: rows 1-30 -->
+  <g>
+    <!-- column numbers every 5 -->
+    <text x="535" y="270" class="tiny">1</text><text x="655" y="270" class="tiny">5</text><text x="805" y="270" class="tiny">10</text><text x="955" y="270" class="tiny">15</text><text x="1105" y="270" class="tiny">20</text><text x="1255" y="270" class="tiny">25</text>
+    <!-- simplified hole grid -->
+    <g id="holes">
+      <circle cx="540" cy="285" r="5" class="hole"/><circle cx="540" cy="320" r="5" class="hole"/><circle cx="540" cy="355" r="5" class="hole"/><circle cx="540" cy="390" r="5" class="hole"/><circle cx="540" cy="425" r="5" class="hole"/><circle cx="540" cy="500" r="5" class="hole"/><circle cx="540" cy="535" r="5" class="hole"/><circle cx="540" cy="570" r="5" class="hole"/><circle cx="540" cy="605" r="5" class="hole"/><circle cx="540" cy="640" r="5" class="hole"/>
+      <circle cx="570" cy="285" r="5" class="hole"/><circle cx="570" cy="320" r="5" class="hole"/><circle cx="570" cy="355" r="5" class="hole"/><circle cx="570" cy="390" r="5" class="hole"/><circle cx="570" cy="425" r="5" class="hole"/><circle cx="570" cy="500" r="5" class="hole"/><circle cx="570" cy="535" r="5" class="hole"/><circle cx="570" cy="570" r="5" class="hole"/><circle cx="570" cy="605" r="5" class="hole"/><circle cx="570" cy="640" r="5" class="hole"/>
+      <circle cx="600" cy="285" r="5" class="hole"/><circle cx="600" cy="320" r="5" class="hole"/><circle cx="600" cy="355" r="5" class="hole"/><circle cx="600" cy="390" r="5" class="hole"/><circle cx="600" cy="425" r="5" class="hole"/><circle cx="600" cy="500" r="5" class="hole"/><circle cx="600" cy="535" r="5" class="hole"/><circle cx="600" cy="570" r="5" class="hole"/><circle cx="600" cy="605" r="5" class="hole"/><circle cx="600" cy="640" r="5" class="hole"/>
+      <circle cx="660" cy="285" r="5" class="hole"/><circle cx="660" cy="320" r="5" class="hole"/><circle cx="660" cy="355" r="5" class="hole"/><circle cx="660" cy="390" r="5" class="hole"/><circle cx="660" cy="425" r="5" class="hole"/><circle cx="660" cy="500" r="5" class="hole"/><circle cx="660" cy="535" r="5" class="hole"/><circle cx="660" cy="570" r="5" class="hole"/><circle cx="660" cy="605" r="5" class="hole"/><circle cx="660" cy="640" r="5" class="hole"/>
+      <circle cx="810" cy="285" r="5" class="hole"/><circle cx="810" cy="320" r="5" class="hole"/><circle cx="810" cy="355" r="5" class="hole"/><circle cx="810" cy="390" r="5" class="hole"/><circle cx="810" cy="425" r="5" class="hole"/><circle cx="810" cy="500" r="5" class="hole"/><circle cx="810" cy="535" r="5" class="hole"/><circle cx="810" cy="570" r="5" class="hole"/><circle cx="810" cy="605" r="5" class="hole"/><circle cx="810" cy="640" r="5" class="hole"/>
+      <circle cx="960" cy="285" r="5" class="hole"/><circle cx="960" cy="320" r="5" class="hole"/><circle cx="960" cy="355" r="5" class="hole"/><circle cx="960" cy="390" r="5" class="hole"/><circle cx="960" cy="425" r="5" class="hole"/><circle cx="960" cy="500" r="5" class="hole"/><circle cx="960" cy="535" r="5" class="hole"/><circle cx="960" cy="570" r="5" class="hole"/><circle cx="960" cy="605" r="5" class="hole"/><circle cx="960" cy="640" r="5" class="hole"/>
+      <circle cx="1110" cy="285" r="5" class="hole"/><circle cx="1110" cy="320" r="5" class="hole"/><circle cx="1110" cy="355" r="5" class="hole"/><circle cx="1110" cy="390" r="5" class="hole"/><circle cx="1110" cy="425" r="5" class="hole"/><circle cx="1110" cy="500" r="5" class="hole"/><circle cx="1110" cy="535" r="5" class="hole"/><circle cx="1110" cy="570" r="5" class="hole"/><circle cx="1110" cy="605" r="5" class="hole"/><circle cx="1110" cy="640" r="5" class="hole"/>
+      <circle cx="1260" cy="285" r="5" class="hole"/><circle cx="1260" cy="320" r="5" class="hole"/><circle cx="1260" cy="355" r="5" class="hole"/><circle cx="1260" cy="390" r="5" class="hole"/><circle cx="1260" cy="425" r="5" class="hole"/><circle cx="1260" cy="500" r="5" class="hole"/><circle cx="1260" cy="535" r="5" class="hole"/><circle cx="1260" cy="570" r="5" class="hole"/><circle cx="1260" cy="605" r="5" class="hole"/><circle cx="1260" cy="640" r="5" class="hole"/>
+    </g>
+  </g>
+
+  <!-- Breadboard parts visual -->
+  <circle cx="660" cy="425" r="22" fill="#fff0a6" stroke="#8a5b00" stroke-width="2"/><text x="637" y="462" class="small">입구 LDR</text>
+  <rect x="560" y="390" width="80" height="24" fill="#ffdca8" stroke="#8a5b00" rx="5"/><text x="578" y="407" class="tiny">10kΩ</text>
+  <circle cx="810" cy="425" r="22" fill="#fff0a6" stroke="#8a5b00" stroke-width="2"/><text x="788" y="462" class="small">출구 LDR</text>
+  <rect x="710" y="390" width="80" height="24" fill="#ffdca8" stroke="#8a5b00" rx="5"/><text x="728" y="407" class="tiny">10kΩ</text>
+  <rect x="1100" y="390" width="70" height="24" fill="#ffdca8" stroke="#8a5b00" rx="5"/><text x="1118" y="407" class="tiny">220Ω</text>
+  <circle cx="1195" cy="500" r="18" fill="#ff5a5a" stroke="#8a1515" stroke-width="2"/><text x="1172" y="532" class="small">만차 LED</text>
+  <circle cx="1260" cy="570" r="22" fill="#e9ecef" stroke="#333" stroke-width="2"/><text x="1235" y="607" class="small">부저</text>
+
+  <!-- Wires to breadboard -->
+  <path d="M355 285 L430 285 L430 216 L480 216" class="red"/>
+  <path d="M355 320 L420 320 L420 246 L480 246" class="black"/>
+  <path d="M355 360 L620 360 L620 425 L660 425" class="blue"/>
+  <path d="M355 395 L770 395 L770 425 L810 425" class="blue"/>
+  <path d="M355 430 L510 430 L510 600" class="green"/>
+  <path d="M355 465 L525 465 L525 625" class="green"/>
+  <path d="M85 590 L1110 390" class="orange"/>
+  <path d="M85 555 L1260 570" class="orange"/>
+  <path d="M355 520 L1350 260" class="purple"/>
+  <path d="M355 555 L1350 300" class="purple"/>
+  <path d="M355 590 L1350 400" class="blue"/>
+  <path d="M355 625 L1350 520" class="blue"/>
+
+  <!-- Power jumpers visual -->
+  <path d="M480 216 L660 216 L660 403" class="red thin"/>
+  <path d="M560 402 L480 246" class="black thin"/>
+  <path d="M480 216 L810 216 L810 403" class="red thin"/>
+  <path d="M710 402 L480 246" class="black thin"/>
+  <path d="M1195 518 L1195 695 L480 706" class="black thin"/>
+  <path d="M1260 592 L1260 706 L480 706" class="black thin"/>
+
+  <!-- External modules -->
+  <rect x="1350" y="130" width="380" height="220" class="module"/>
+  <text x="1380" y="165" class="label">Wemos Gateway 연결 헤더</text>
+  <text x="1380" y="200" class="text">Uno D2(RX) ← Wemos D6(TX)</text>
+  <text x="1380" y="230" class="text">Uno D3(TX) → 분압 → Wemos D5(RX)</text>
+  <text x="1380" y="260" class="text">Uno GND ↔ Wemos GND</text>
+  <text x="1380" y="300" class="small">주의: Uno TX 5V는 Wemos RX에 바로 넣지 말고 분압 권장</text>
+
+  <rect x="1350" y="380" width="380" height="90" class="module"/>
+  <text x="1380" y="415" class="label">입구 서보</text>
+  <text x="1380" y="445" class="text">Signal D9, VCC 5V, GND 공통</text>
+  <rect x="1350" y="500" width="380" height="90" class="module"/>
+  <text x="1380" y="535" class="label">출구 서보</text>
+  <text x="1380" y="565" class="text">Signal D10, VCC 5V, GND 공통</text>
+  <rect x="1350" y="620" width="380" height="100" class="module"/>
+  <text x="1380" y="655" class="label">I2C LCD</text>
+  <text x="1380" y="685" class="text">VCC 5V, GND, SDA A4, SCL A5</text>
+
+  <!-- Placement table -->
+  <rect x="55" y="800" width="1685" height="385" class="module"/>
+  <text x="90" y="835" class="label">브레드보드 조립 위치표</text>
+  <text x="90" y="865" class="text">전원: Uno 5V → 빨간 + 레일, Uno GND → 파란 - 레일. 모든 서보, LCD, Wemos는 GND를 공통으로 연결.</text>
+
+  <text x="90" y="910" class="label">입구 조도센서</text>
+  <text x="90" y="938" class="text">LDR 한쪽 → +레일, 다른쪽 → E5. 10kΩ 저항: A5 → -레일. A0 점퍼: C5 → Uno A0.</text>
+  <text x="90" y="980" class="label">출구 조도센서</text>
+  <text x="90" y="1008" class="text">LDR 한쪽 → +레일, 다른쪽 → E9. 10kΩ 저항: A9 → -레일. A1 점퍼: C9 → Uno A1.</text>
+  <text x="90" y="1050" class="label">만차 LED / 부저</text>
+  <text x="90" y="1078" class="text">D12 → A18, 220Ω 저항 E18-F18, LED + H18, LED - H19, J19 → -레일. D11 → 부저 +, 부저 - → -레일.</text>
+  <text x="90" y="1120" class="label">서보 / LCD / Wemos</text>
+  <text x="90" y="1148" class="text">입구 서보 Signal → D9, 출구 서보 Signal → D10. LCD SDA → A4, SCL → A5. Wemos TX → D2, Uno D3 → 분압 → Wemos RX.</text>
+
+  <!-- Legend -->
+  <rect x="1220" y="800" width="480" height="170" class="note"/>
+  <text x="1250" y="835" class="label">색상 의미</text>
+  <line x1="1250" y1="865" x2="1310" y2="865" class="red"/><text x="1325" y="870" class="text">5V</text>
+  <line x1="1250" y1="895" x2="1310" y2="895" class="black"/><text x="1325" y="900" class="text">GND</text>
+  <line x1="1250" y1="925" x2="1310" y2="925" class="blue"/><text x="1325" y="930" class="text">센서/서보 신호</text>
+  <line x1="1450" y1="865" x2="1510" y2="865" class="green"/><text x="1525" y="870" class="text">I2C</text>
+  <line x1="1450" y1="895" x2="1510" y2="895" class="purple"/><text x="1525" y="900" class="text">보드 간 통신</text>
+  <line x1="1450" y1="925" x2="1510" y2="925" class="orange"/><text x="1525" y="930" class="text">경고 장치</text>
+</svg>
