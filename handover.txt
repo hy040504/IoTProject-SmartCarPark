@@ -5,13 +5,13 @@
 
 본 프로젝트는 Wemos D1 R1 보드를 기반으로 한 스마트 주차장 시스템이다.
 입구에서는 조도센서로 차량 접근 여부를 판단하고, 내부 주차칸 2개는 초음파센서로 점유 여부를 확인한다.
-빈자리가 있으면 LCD에 Gate Open을 표시하고 차단기를 열며, 만차이면 LCD에 Parking Full을 표시하고 LED 또는 부저로 경고한다.
+빈자리가 있으면 LCD에 Entrance Open을 표시하고 입구 차단기를 열며, 만차이면 LCD에 Parking Full을 표시하고 LED 또는 부저로 경고한다.
 주차 시간과 요금 계산은 별도의 Node.js Express 서버가 담당한다.
 
 2. 현재 구현된 전체 흐름
 
 현재 보드 구성:
-- Arduino Uno 1: sketches/uno_gate/uno_gate.ino 업로드, 입구/차단기/LCD/만차 경고 담당
+- Arduino Uno 1: sketches/uno_gate/uno_gate.ino 업로드, 입구/출구 조도센서, 입구/출구 차단기, LCD, 만차 경고 담당
 - Arduino Uno 2: sketches/uno_slots/uno_slots.ino 업로드, 주차칸 2개 초음파센서와 칸별 LED 담당
 - Wemos D1 R1 1: sketches/wemos_gateway/wemos_gateway.ino 업로드, Uno 이벤트와 요금 서버 사이의 게이트웨이 담당
 - Wemos D1 R1 2: sketches/wemos_monitor/wemos_monitor.ino 업로드, 서버 상태 모니터링 담당
@@ -20,10 +20,10 @@
 프로젝트가 4개 보드로 나뉘면서 실제 업로드 대상은 sketches 폴더 안의 보드별 ino 파일이다.
 BOARD_UPLOAD_GUIDE.md는 각 보드에 어떤 스케치를 업로드해야 하는지 안내하는 문서이다.
 
-1) 입구 차량 감지
-- 조도센서가 입구 차량 접근을 감지한다.
-- 현재 구현에서는 차단기/entrance_sensor.h의 isEntranceVehicleDetected()가 이 역할을 담당한다.
-- 조도 기준값은 ENTRANCE_BLOCKED_THRESHOLD = 450으로 설정되어 있다.
+1) 입구/출구 차량 감지
+- 조도센서 2개가 각각 입구 차량과 출구 차량을 감지한다.
+- 평상시 조도 값은 400~500대이고 차량이 가리면 300대에서 200대 아래로 내려가는 값이 확인되었다.
+- 현재 기준값은 LIGHT_BLOCKED_THRESHOLD = 350으로 설정되어 있다.
 
 2) 주차칸 상태 확인
 - 초음파센서 2개가 각각 1번, 2번 주차칸의 점유 여부를 확인한다.
@@ -31,14 +31,14 @@ BOARD_UPLOAD_GUIDE.md는 각 보드에 어떤 스케치를 업로드해야 하�
 - 차량 감지 기준 거리는 SLOT_OCCUPIED_DISTANCE_CM = 5cm이다.
 
 3) 입차 가능 판단
-- 입구에 차량이 있고 빈자리가 1개 이상이면 LCD에 Gate Open을 표시한다.
-- 만차 경고 LED/부저를 끄고, 서보모터를 90도로 이동시켜 차단기를 연다.
+- 입구에 차량이 있고 빈자리가 1개 이상이면 LCD에 Entrance Open을 표시한다.
+- 만차 경고 LED/부저를 끄고, 입구 차단기 서보모터를 90도로 이동시켜 차단기를 연다.
 - 이 흐름은 sketches/uno_gate/uno_gate.ino의 loop()에서 처리한다.
 
 4) 만차 처리
 - 입구에 차량이 있고 빈자리가 없으면 LCD에 Parking Full을 표시한다.
 - 주차칸/parking_alert.h를 통해 만차 경고 LED/부저를 켠다.
-- 차단기/barrier.h의 closeBarrier()로 차단기를 닫힌 상태로 유지한다.
+- 입구 차단기를 닫힌 상태로 유지한다.
 
 5) 입차 등록
 - 차량이 실제 주차칸에 들어가면 해당 칸 초음파센서가 점유 상태로 전환된다.
@@ -49,8 +49,8 @@ BOARD_UPLOAD_GUIDE.md는 각 보드에 어떤 스케치를 업로드해야 하�
 6) 2단계 출차 처리
 - 1차 감지: 차량이 주차칸에서 빠지면 해당 칸을 출차 대기 상태로 저장한다.
 - 이 시점에는 아직 서버에 출차 요청을 보내지 않는다.
-- 2차 감지: 차량이 차단기를 통과했다고 감지되면 confirmPendingExitAtBarrier()가 실행된다.
-- 그때 sendVehicleExitRequest(slotId)를 통해 GET /parking/exit?slot=칸번호 요청을 보낸다.
+- 2차 감지: 차량이 출구 조도센서를 가리면 Arduino Uno 1이 Wemos 게이트웨이에 BARRIER_EXIT 이벤트를 보낸다.
+- Wemos 게이트웨이가 GET /parking/exit?slot=칸번호 요청을 보낸다.
 - 서버 response에서 fee 값을 추출하고 LCD에 요금을 표시한다.
 - 출차를 2단계로 나눈 이유는 초음파센서 흔들림이나 일시적 오감지를 바로 출차로 처리하지 않기 위해서이다.
 
@@ -60,11 +60,11 @@ BOARD_UPLOAD_GUIDE.md
 - 보드별 업로드 대상 스케치를 안내하는 문서이다.
 - 루트에는 실행용 ino 파일을 두지 않고, sketches 폴더의 보드별 ino 파일을 사용한다.
 
-차단기/entrance_sensor.h
-- 조도센서 입력을 담당한다.
-- isEntranceVehicleDetected()는 입구 차량 대기 여부를 판단한다.
-- isBarrierVehicleDetected()는 현재 조도센서 값을 재사용하여 차단기 통과 감지 역할을 한다.
-- 추후 차단기 전용 센서를 추가하면 isBarrierVehicleDetected() 내부만 교체하면 된다.
+sketches/uno_gate/uno_gate.ino
+- 입구 조도센서와 출구 조도센서를 각각 읽는다.
+- 입구 차량 감지 시 빈자리 여부에 따라 입구 차단기를 제어한다.
+- 출구 차량 감지 시 출구 차단기를 열고 Wemos 게이트웨이에 BARRIER_EXIT 이벤트를 보낸다.
+- 조도센서 튜닝을 위해 입구/출구 조도 값을 시리얼 모니터에 주기적으로 출력한다.
 
 주차칸/parking_slots.h
 - 주차칸 2개의 초음파센서와 칸별 LED를 담당한다.
@@ -74,7 +74,7 @@ BOARD_UPLOAD_GUIDE.md
 
 주차칸/parking_display.h
 - I2C LCD 표시를 담당한다.
-- Gate Open, Parking Full, 출차 요금 메시지를 출력한다.
+- Entrance Open, Parking Full, 출차 요금 메시지를 출력한다.
 - 같은 메시지를 반복해서 clear하지 않도록 이전 메시지를 저장하여 LCD 깜빡임을 줄였다.
 
 주차칸/parking_alert.h
@@ -82,9 +82,8 @@ BOARD_UPLOAD_GUIDE.md
 - turnOnParkingFullAlert(), turnOffParkingFullAlert()로 상태를 변경한다.
 
 차단기/barrier.h
-- 서보모터 차단기를 제어한다.
-- BARRIER_CLOSED_ANGLE = 0, BARRIER_OPEN_ANGLE = 90으로 설정되어 있다.
-- openBarrier(), closeBarrier()로 차단기 상태를 바꾼다.
+- 이전 단일 보드 구조에서 사용하던 차단기 모듈이다.
+- 현재 실제 업로드 구조에서는 sketches/uno_gate/uno_gate.ino가 입구/출구 차단기를 직접 제어한다.
 
 요금/fee_request.h
 - Wemos가 Wi-Fi에 연결하고 Express 서버에 HTTP GET 요청을 보내는 역할을 한다.
@@ -120,9 +119,11 @@ GET /parking/sessions
 5. 핀 설정
 
 입구 조도센서: A0
-차단기 서보모터: D5
-만차 경고 LED: D0
-만차 경고 부저: D8
+출구 조도센서: A1
+입구 차단기 서보모터: 9
+출구 차단기 서보모터: 10
+만차 경고 LED: 12
+만차 경고 부저: 11
 1번 칸 초음파 TRIG / ECHO: D6 / D3
 2번 칸 초음파 TRIG / ECHO: D7 / D4
 1번 칸 빨간 / 초록 LED: D9 / D10
@@ -183,9 +184,10 @@ Node.js 서버:
 - FEE_SERVER_BASE_URL의 192.168.0.10은 예시값이다.
 - 실제 서버 PC의 내부 IP로 변경해야 한다.
 
-4) 차단기 통과 센서 개선
-- 현재는 입구 조도센서를 차단기 통과 감지에도 재사용한다.
-- 안정적인 출차 판정을 위해 차단기 전용 조도센서 또는 적외선 센서를 추가하는 것이 좋다.
+4) 조도센서 기준값 튜닝
+- 현재 기준값은 350이다.
+- 평상시 값이 400~500대, 차량이 지나갈 때 300 이하로 내려가는 환경을 기준으로 설정했다.
+- 설치 위치나 주변 조명에 따라 LIGHT_BLOCKED_THRESHOLD 값을 조정해야 한다.
 
 5) 서버 데이터 영속화
 - 현재 서버는 주차 기록을 메모리에 저장한다.
