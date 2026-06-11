@@ -1,8 +1,8 @@
-#include "barrier.h"
-#include "entrance_sensor.h"
-#include "parking_alert.h"
-#include "parking_display.h"
-#include "parking_slots.h"
+#include "barrier/barrier.h"
+#include "barrier/entrance_sensor.h"
+#include "parking/parking_alert.h"
+#include "parking/parking_display.h"
+#include "parking/parking_slots.h"
 
 /**
  * 주차장 감지 시스템을 시작한다.
