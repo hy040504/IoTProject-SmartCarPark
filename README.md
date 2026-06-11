@@ -135,14 +135,14 @@ Wemos D1 R1 기반의 스마트 주차장 프로젝트입니다.
 ```text
 led/
 ├── led.ino
-├── barrier/
+├── 차단기/
 │   ├── barrier.h
 │   └── entrance_sensor.h
-├── parking/
+├── 주차칸/
 │   ├── parking_slots.h
 │   ├── parking_display.h
 │   └── parking_alert.h
-├── fee/
+├── 요금/
 │   ├── fee_request.h
 │   └── fee-server/
 │       ├── package.json
@@ -157,14 +157,14 @@ led/
 | 파일 | 담당 기능 |
 | --- | --- |
 | `led.ino` | 전체 시스템 흐름 제어 |
-| `barrier/entrance_sensor.h` | 입구 조도센서 감지, 차단기 통과 감지 함수 제공 |
-| `barrier/barrier.h` | 서보모터 기반 차단기 열림/닫힘 |
-| `parking/parking_slots.h` | 주차칸 2개 상태 확인, 칸별 LED 제어, 입차/출차 대기 처리 |
-| `parking/parking_display.h` | I2C LCD 메시지 출력 |
-| `parking/parking_alert.h` | 만차 경고 LED/부저 제어 |
-| `fee/fee_request.h` | Wemos에서 요금 서버로 HTTP GET 요청 전송 |
-| `fee/fee-server/src/server.js` | Express API 서버 |
-| `fee/fee-server/src/feeCalculator.js` | 주차 요금 계산 로직 |
+| `차단기/entrance_sensor.h` | 입구 조도센서 감지, 차단기 통과 감지 함수 제공 |
+| `차단기/barrier.h` | 서보모터 기반 차단기 열림/닫힘 |
+| `주차칸/parking_slots.h` | 주차칸 2개 상태 확인, 칸별 LED 제어, 입차/출차 대기 처리 |
+| `주차칸/parking_display.h` | I2C LCD 메시지 출력 |
+| `주차칸/parking_alert.h` | 만차 경고 LED/부저 제어 |
+| `요금/fee_request.h` | Wemos에서 요금 서버로 HTTP GET 요청 전송 |
+| `요금/fee-server/src/server.js` | Express API 서버 |
+| `요금/fee-server/src/feeCalculator.js` | 주차 요금 계산 로직 |
 
 ---
 
@@ -174,19 +174,19 @@ led/
 
 | 장치 | 핀 | 위치 |
 | --- | --- | --- |
-| 입구 조도센서 | `A0` | `barrier/entrance_sensor.h` |
-| 차단기 서보모터 | `D5` | `barrier/barrier.h` |
-| 만차 경고 LED | `D0` | `parking/parking_alert.h` |
-| 만차 경고 부저 | `D8` | `parking/parking_alert.h` |
-| 1번 칸 초음파 TRIG | `D6` | `parking/parking_slots.h` |
-| 1번 칸 초음파 ECHO | `D3` | `parking/parking_slots.h` |
-| 2번 칸 초음파 TRIG | `D7` | `parking/parking_slots.h` |
-| 2번 칸 초음파 ECHO | `D4` | `parking/parking_slots.h` |
-| 1번 칸 빨간 LED | `D9` | `parking/parking_slots.h` |
-| 1번 칸 초록 LED | `D10` | `parking/parking_slots.h` |
-| 2번 칸 빨간 LED | `D11` | `parking/parking_slots.h` |
-| 2번 칸 초록 LED | `D12` | `parking/parking_slots.h` |
-| I2C LCD | SDA / SCL | `parking/parking_display.h` |
+| 입구 조도센서 | `A0` | `차단기/entrance_sensor.h` |
+| 차단기 서보모터 | `D5` | `차단기/barrier.h` |
+| 만차 경고 LED | `D0` | `주차칸/parking_alert.h` |
+| 만차 경고 부저 | `D8` | `주차칸/parking_alert.h` |
+| 1번 칸 초음파 TRIG | `D6` | `주차칸/parking_slots.h` |
+| 1번 칸 초음파 ECHO | `D3` | `주차칸/parking_slots.h` |
+| 2번 칸 초음파 TRIG | `D7` | `주차칸/parking_slots.h` |
+| 2번 칸 초음파 ECHO | `D4` | `주차칸/parking_slots.h` |
+| 1번 칸 빨간 LED | `D9` | `주차칸/parking_slots.h` |
+| 1번 칸 초록 LED | `D10` | `주차칸/parking_slots.h` |
+| 2번 칸 빨간 LED | `D11` | `주차칸/parking_slots.h` |
+| 2번 칸 초록 LED | `D12` | `주차칸/parking_slots.h` |
+| I2C LCD | SDA / SCL | `주차칸/parking_display.h` |
 
 ---
 
@@ -313,7 +313,7 @@ Wemos에서 접근할 수 있도록 서버 PC의 내부 IP 주소로 바꿔야 �
 ### 1. 요금 서버 실행
 
 ```bash
-cd fee/fee-server
+cd 요금/fee-server
 npm install
 npm start
 ```
@@ -328,7 +328,7 @@ Wemos 코드에서는 `localhost`가 아니라 서버 PC의 내부 IP를 사용�
 
 ### 2. Wemos 설정
 
-`fee/fee_request.h`에서 Wi-Fi와 서버 주소를 수정합니다.
+`요금/fee_request.h`에서 Wi-Fi와 서버 주소를 수정합니다.
 
 ```cpp
 const char WIFI_SSID[] = "YOUR_WIFI_SSID";
@@ -357,8 +357,9 @@ Arduino IDE에서 Wemos D1 R1 보드를 선택한 뒤 `led.ino`를 업로드합�
 - Wemos D1 R1의 실제 사용 가능 핀은 보드 패키지와 보드 종류에 따라 다를 수 있습니다.
 - `D9`, `D10`, `D11`, `D12`는 환경에 따라 바로 인식되지 않을 수 있어 실제 보드 핀맵 확인이 필요합니다.
 - HC-SR04의 ECHO는 보통 5V로 출력되므로 ESP8266 입력에는 전압 분배 회로를 사용하는 것이 안전합니다.
-- I2C LCD 주소가 `0x27`이 아니면 `parking/parking_display.h`의 `LCD_ADDRESS` 값을 바꿔야 합니다.
+- I2C LCD 주소가 `0x27`이 아니면 `주차칸/parking_display.h`의 `LCD_ADDRESS` 값을 바꿔야 합니다.
 - 현재 차단기 통과 감지는 입구 조도센서 값을 재사용합니다. 전용 출차 센서를 추가하면 `isBarrierVehicleDetected()` 함수 내부만 바꾸면 됩니다.
+- 현재 폴더명은 가독성을 위해 한글(`차단기`, `주차칸`, `요금`)로 정리되어 있습니다. 일부 Arduino CLI/ESP8266 빌드 환경에서는 한글 include 경로가 깨질 수 있으므로, 컴파일 오류가 나면 폴더명을 ASCII로 되돌려야 합니다.
 
 ---
 
@@ -381,4 +382,5 @@ Arduino IDE에서 Wemos D1 R1 보드를 선택한 뒤 `led.ino`를 업로드합�
 
 - Node.js 서버 문법 확인 완료
 - Express 서버 GET 요청 테스트 완료
-- Arduino CLI `1.5.1` 기준 Wemos D1 R1 보드(`esp8266:esp8266:d1`) 컴파일 완료
+- 영어 폴더명 기준 Arduino CLI `1.5.1` / Wemos D1 R1 보드(`esp8266:esp8266:d1`) 컴파일 완료
+- 한글 폴더명 기준 Arduino CLI 컴파일은 ESP8266 빌드 과정의 include 경로 인코딩 문제로 실패 확인
