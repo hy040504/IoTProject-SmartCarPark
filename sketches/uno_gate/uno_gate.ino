@@ -7,14 +7,14 @@ const int WEMOS_TX_PIN = 3;             // Wemos 수신선으로 보내는 핀
 const int ENTRANCE_LIGHT_PIN = A0;      // 입구 차량 감지 조도센서 핀
 const int EXIT_LIGHT_PIN = A1;          // 출구 차량 감지 조도센서 핀
 const int ENTRANCE_SERVO_PIN = 9;       // 입구 차단기 서보모터 제어 핀
-const int EXIT_SERVO_PIN = 10;          // 출구 차단기 서보모터 제어 핀
-const int FULL_ALERT_LED_PIN = 12;      // 만차 경고 LED 핀
-const int FULL_ALERT_BUZZER_PIN = 11;   // 만차 경고 부저 핀
+const int EXIT_SERVO_PIN = 8;           // 출구 차단기 서보모터 제어 핀
 
-const int LIGHT_BLOCKED_THRESHOLD = 350;      // 차량 그림자로 판단할 조도 기준
-const int BARRIER_CLOSED_ANGLE = 0;           // 차단기 닫힘 각도
-const int BARRIER_OPEN_ANGLE = 90;            // 차단기 열림 각도
-const unsigned long GATE_OPEN_TIME_MS = 3000; // 차단기 자동 닫힘 대기 시간
+const int LIGHT_BLOCKED_THRESHOLD = 200;      // 차량 그림자로 판단할 조도 기준
+const int SERVO_STOP_ANGLE = 90;              // 연속회전 서보 정지 신호
+const int SERVO_OPEN_ROTATE_ANGLE = 180;      // 차단기 열림 방향 회전 신호
+const int SERVO_CLOSE_ROTATE_ANGLE = 0;       // 차단기 닫힘 방향 회전 신호
+const unsigned long SERVO_ROTATE_TIME_MS = 650; // 차단기 1회 이동 시간
+const unsigned long GATE_OPEN_TIME_MS = 3000;   // 차단기 열림 유지 시간
 const unsigned long LIGHT_LOG_INTERVAL_MS = 1000; // 조도센서 로그 출력 주기
 
 SoftwareSerial wemosSerial(WEMOS_RX_PIN, WEMOS_TX_PIN); // Wemos 게이트웨이 통신 포트
@@ -22,11 +22,25 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);                     // 주차장 상태 표�
 Servo entranceBarrierServo;                             // 입구 차단기 제어 서보 객체
 Servo exitBarrierServo;                                 // 출구 차단기 제어 서보 객체
 
+enum BarrierPhase {
+  BARRIER_STOPPED,
+  BARRIER_OPENING,
+  BARRIER_OPEN,
+  BARRIER_CLOSING
+};
+
+struct BarrierState {
+  Servo* servo;
+  BarrierPhase phase;
+  unsigned long changedAt;
+};
+
+BarrierState entranceBarrier = {&entranceBarrierServo, BARRIER_STOPPED, 0}; // 입구 차단기 동작 상태
+BarrierState exitBarrier = {&exitBarrierServo, BARRIER_STOPPED, 0};         // 출구 차단기 동작 상태
+
 int cachedEmptySlots = 2;                  // Wemos에서 마지막으로 받은 빈자리 수
 bool previousEntranceDetected = false;     // 입구 감지 중복 처리 방지 상태
 bool previousExitDetected = false;         // 출차 감지 중복 처리 방지 상태
-unsigned long entranceGateOpenedAt = 0;    // 입구 차단기를 연 시각
-unsigned long exitGateOpenedAt = 0;        // 출구 차단기를 연 시각
 unsigned long lastLightLoggedAt = 0;       // 마지막 조도 로그 출력 시각
 
 /**
@@ -44,31 +58,60 @@ void showMessage(String firstLine, String secondLine) {
 }
 
 /**
- * 지정한 차단기를 열린 각도로 이동한다.
+ * 연속회전 서보를 정지 상태로 둔다.
  * @param {Servo&} barrierServo - 제어할 차단기 서보 객체
  * @returns {void} 반환값 없음
  */
-void openGate(Servo& barrierServo) {
-  barrierServo.write(BARRIER_OPEN_ANGLE);
+void stopGateServo(Servo& barrierServo) {
+  barrierServo.write(SERVO_STOP_ANGLE);
 }
 
 /**
- * 지정한 차단기를 닫힌 각도로 유지한다.
- * @param {Servo&} barrierServo - 제어할 차단기 서보 객체
+ * 차단기 열림 방향으로 짧게 회전을 시작한다.
+ * @param {BarrierState&} barrier - 제어할 차단기 상태
  * @returns {void} 반환값 없음
  */
-void closeGate(Servo& barrierServo) {
-  barrierServo.write(BARRIER_CLOSED_ANGLE);
+void startOpeningGate(BarrierState& barrier) {
+  barrier.servo->write(SERVO_OPEN_ROTATE_ANGLE);
+  barrier.phase = BARRIER_OPENING;
+  barrier.changedAt = millis();
 }
 
 /**
- * 만차 경고 장치를 켜거나 끈다.
- * @param {bool} enabled - 경고 활성화 여부
+ * 차단기 닫힘 방향으로 짧게 회전을 시작한다.
+ * @param {BarrierState&} barrier - 제어할 차단기 상태
  * @returns {void} 반환값 없음
  */
-void setFullAlert(bool enabled) {
-  digitalWrite(FULL_ALERT_LED_PIN, enabled ? HIGH : LOW);
-  digitalWrite(FULL_ALERT_BUZZER_PIN, enabled ? HIGH : LOW);
+void startClosingGate(BarrierState& barrier) {
+  barrier.servo->write(SERVO_CLOSE_ROTATE_ANGLE);
+  barrier.phase = BARRIER_CLOSING;
+  barrier.changedAt = millis();
+}
+
+/**
+ * 연속회전 서보가 계속 돌지 않도록 이동 시간 이후 정지시킨다.
+ * @param {BarrierState&} barrier - 갱신할 차단기 상태
+ * @returns {void} 반환값 없음
+ */
+void updateGate(BarrierState& barrier) {
+  unsigned long elapsed = millis() - barrier.changedAt;
+
+  if (barrier.phase == BARRIER_OPENING && elapsed >= SERVO_ROTATE_TIME_MS) {
+    stopGateServo(*barrier.servo);
+    barrier.phase = BARRIER_OPEN;
+    barrier.changedAt = millis();
+    return;
+  }
+
+  if (barrier.phase == BARRIER_OPEN && elapsed >= GATE_OPEN_TIME_MS) {
+    startClosingGate(barrier);
+    return;
+  }
+
+  if (barrier.phase == BARRIER_CLOSING && elapsed >= SERVO_ROTATE_TIME_MS) {
+    stopGateServo(*barrier.servo);
+    barrier.phase = BARRIER_STOPPED;
+  }
 }
 
 /**
@@ -140,15 +183,14 @@ void handleEntranceVehicle(int entranceLightValue) {
 
   if (entranceDetected && !previousEntranceDetected) {
     if (cachedEmptySlots > 0) {
-      setFullAlert(false);
       showMessage("Entrance Open", "Empty: " + String(cachedEmptySlots));
-      openGate(entranceBarrierServo);
-      entranceGateOpenedAt = millis();
+      if (entranceBarrier.phase == BARRIER_STOPPED) {
+        startOpeningGate(entranceBarrier);
+      }
     } else {
-      setFullAlert(true);
       showMessage("Parking Full", "Gate Closed");
-      closeGate(entranceBarrierServo);
-      entranceGateOpenedAt = 0;
+      stopGateServo(entranceBarrierServo);
+      entranceBarrier.phase = BARRIER_STOPPED;
     }
   }
 
@@ -166,24 +208,12 @@ void handleExitVehicle(int exitLightValue) {
   if (exitDetected && !previousExitDetected) {
     wemosSerial.println("BARRIER_EXIT");
     showMessage("Exit Open", "Calculating...");
-    openGate(exitBarrierServo);
-    exitGateOpenedAt = millis();
+    if (exitBarrier.phase == BARRIER_STOPPED) {
+      startOpeningGate(exitBarrier);
+    }
   }
 
   previousExitDetected = exitDetected;
-}
-
-/**
- * 열린 차단기를 일정 시간 뒤 자동으로 닫는다.
- * @param {Servo&} barrierServo - 제어할 차단기 서보 객체
- * @param {unsigned long&} openedAt - 차단기를 연 시각
- * @returns {void} 반환값 없음
- */
-void closeGateAfterTimeout(Servo& barrierServo, unsigned long& openedAt) {
-  if (openedAt > 0 && millis() - openedAt >= GATE_OPEN_TIME_MS) {
-    closeGate(barrierServo);
-    openedAt = 0;
-  }
 }
 
 /**
@@ -194,15 +224,12 @@ void setup() {
   Serial.begin(9600);
   wemosSerial.begin(9600);
 
-  pinMode(FULL_ALERT_LED_PIN, OUTPUT);
-  pinMode(FULL_ALERT_BUZZER_PIN, OUTPUT);
-
   lcd.init();
   lcd.backlight();
   entranceBarrierServo.attach(ENTRANCE_SERVO_PIN);
   exitBarrierServo.attach(EXIT_SERVO_PIN);
-  closeGate(entranceBarrierServo);
-  closeGate(exitBarrierServo);
+  stopGateServo(entranceBarrierServo);
+  stopGateServo(exitBarrierServo);
   showMessage("Smart Parking", "Gates Ready");
 }
 
@@ -218,7 +245,7 @@ void loop() {
   logLightValues(entranceLightValue, exitLightValue);
   handleEntranceVehicle(entranceLightValue);
   handleExitVehicle(exitLightValue);
-  closeGateAfterTimeout(entranceBarrierServo, entranceGateOpenedAt);
-  closeGateAfterTimeout(exitBarrierServo, exitGateOpenedAt);
+  updateGate(entranceBarrier);
+  updateGate(exitBarrier);
   delay(100);
 }

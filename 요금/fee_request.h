@@ -5,8 +5,8 @@
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
 
-const char WIFI_SSID[] = "YOUR_WIFI_SSID";             // Wemos가 접속할 Wi-Fi 이름
-const char WIFI_PASSWORD[] = "YOUR_WIFI_PASSWORD";     // Wemos가 접속할 Wi-Fi 비밀번호
+const char WIFI_SSID[] = "iptime";                     // Wemos가 접속할 Wi-Fi 이름
+const char WIFI_PASSWORD[] = "00000000";               // Wemos가 접속할 Wi-Fi 비밀번호
 const char FEE_SERVER_BASE_URL[] = "http://192.168.0.10:3000"; // 요금 서버 기본 URL
 const unsigned long WIFI_CONNECT_TIMEOUT_MS = 10000;   // Wi-Fi 연결 대기 최대 시간
 

@@ -1,7 +1,7 @@
 # 🚗 Smart Parking System
 
-Wemos D1 R1 기반의 스마트 주차장 프로젝트입니다.  
-입구에서는 **조도센서**로 차량 접근을 감지하고, 내부 주차칸은 **초음파센서 2개**로 점유 상태를 확인합니다. 빈자리가 있으면 차단기를 열고, 만차이면 LCD와 경고 장치로 진입을 막습니다. 주차 시간과 요금 계산은 별도의 **Node.js Express 요금 서버**가 담당합니다.
+Arduino Uno 2대와 Wemos D1 R1 2대를 사용하는 스마트 주차장 프로젝트입니다.  
+입구에서는 **조도센서**로 차량 접근을 감지하고, 내부 주차칸은 **초음파센서 2개**로 점유 상태를 확인합니다. 빈자리가 있으면 차단기를 열고, 만차이면 LCD에 `Parking Full`을 표시한 뒤 차단기를 닫힌 상태로 유지합니다. 주차 시간과 요금 계산은 별도의 **Node.js Express 요금 서버**가 담당합니다.
 
 ---
 
@@ -11,7 +11,7 @@ Wemos D1 R1 기반의 스마트 주차장 프로젝트입니다.
 
 | 보드 | 업로드할 스케치 | 담당 역할 |
 | --- | --- | --- |
-| Arduino Uno 1 | `sketches/uno_gate/uno_gate.ino` | 입구/출구 조도센서, 입구/출구 차단기, LCD, 만차 경고 |
+| Arduino Uno 1 | `sketches/uno_gate/uno_gate.ino` | 입구/출구 조도센서, 입구/출구 차단기, LCD |
 | Arduino Uno 2 | `sketches/uno_slots/uno_slots.ino` | 주차칸 2개 초음파센서, 칸별 빨간/초록 LED |
 | Wemos D1 R1 1 | `sketches/wemos_gateway/wemos_gateway.ino` | Uno 보드 이벤트 수신, 요금 서버 GET 요청, 요금 응답 중계 |
 | Wemos D1 R1 2 | `sketches/wemos_monitor/wemos_monitor.ino` | 요금 서버 상태 확인용 보조 모니터 |
@@ -80,7 +80,7 @@ Arduino Uno 1: 입구/출구 차단기/LCD
 ┌──────────────┐  ┌────────────────┐
 │LCD Entrance  │  │ LCD Parking Full│
 │Open          │  │                  │
-│ 차단기 열림  │  │ LED/부저 경고   │
+│ 차단기 열림  │  │ 차단기 닫힘 유지│
 └──────┬───────┘  │ 차단기 닫힘     │
        │          └────────────────┘
        v
@@ -124,8 +124,7 @@ Arduino Uno 1: 입구/출구 차단기/LCD
 → 주차칸 2개 상태 확인
 → 빈자리 1개 이상
 → LCD: Entrance Open
-→ 만차 경고 OFF
-→ 서보모터 90도 회전
+→ 서보모터를 정해진 시간 동안 회전
 → 차단기 열림
 ```
 
@@ -135,8 +134,7 @@ Arduino Uno 1: 입구/출구 차단기/LCD
 입구 차량 감지
 → 주차칸 2개 모두 점유
 → LCD: Parking Full
-→ 빨간 LED 또는 부저 경고 ON
-→ 서보모터 0도 유지
+→ 서보모터 정지 상태 유지
 → 차단기 닫힘
 ```
 
@@ -178,17 +176,28 @@ led/
 │   │   └── uno_gate.ino
 │   ├── uno_slots/
 │   │   └── uno_slots.ino
+│   ├── test/
+│   │   ├── uno_d8_servo_test/
+│   │   ├── uno_gate_no_lcd_test/
+│   │   ├── uno_gate_test/
+│   │   └── uno_i2c_scanner/
 │   ├── wemos_gateway/
 │   │   └── wemos_gateway.ino
 │   └── wemos_monitor/
 │       └── wemos_monitor.ino
+├── docs/
+│   └── circuits/
+│       ├── arduino_uno_1_gate.svg
+│       ├── arduino_uno_2_slots.svg
+│       ├── wemos_gateway.svg
+│       └── wemos_monitor.svg
 ├── 차단기/
 │   ├── barrier.h
 │   └── entrance_sensor.h
 ├── 주차칸/
 │   ├── parking_slots.h
 │   ├── parking_display.h
-│   └── parking_alert.h
+│   └── parking_alert.h       # 이전 모듈화 구조 참고용
 ├── 요금/
 │   ├── fee_request.h
 │   └── fee-server/
@@ -204,16 +213,13 @@ led/
 | 파일 | 담당 기능 |
 | --- | --- |
 | `BOARD_UPLOAD_GUIDE.md` | 보드별 업로드 대상 안내 |
-| `sketches/uno_gate/uno_gate.ino` | 입구/출구 조도센서, 입구/출구 차단기, LCD, 만차 경고 제어 |
+| `sketches/uno_gate/uno_gate.ino` | 입구/출구 조도센서, 입구/출구 차단기, LCD 제어 |
 | `sketches/uno_slots/uno_slots.ino` | 주차칸 감지와 칸별 LED 제어 |
 | `sketches/wemos_gateway/wemos_gateway.ino` | Uno 이벤트와 요금 서버 사이의 게이트웨이 |
 | `sketches/wemos_monitor/wemos_monitor.ino` | 요금 서버 상태 확인용 보조 모니터 |
-| `차단기/entrance_sensor.h` | 입구 조도센서 감지, 차단기 통과 감지 함수 제공 |
-| `차단기/barrier.h` | 서보모터 기반 차단기 열림/닫힘 |
-| `주차칸/parking_slots.h` | 주차칸 2개 상태 확인, 칸별 LED 제어, 입차/출차 대기 처리 |
-| `주차칸/parking_display.h` | I2C LCD 메시지 출력 |
-| `주차칸/parking_alert.h` | 만차 경고 LED/부저 제어 |
-| `요금/fee_request.h` | Wemos에서 요금 서버로 HTTP GET 요청 전송 |
+| `docs/circuits/*.svg` | 보드별 회로도 |
+| `sketches/test/*` | 센서, LCD, 서보 분리 테스트용 스케치 |
+| `차단기/`, `주차칸/`, `요금/fee_request.h` | 이전 모듈화 구조에서 사용하던 참고용 헤더 |
 | `요금/fee-server/src/server.js` | Express API 서버 |
 | `요금/fee-server/src/feeCalculator.js` | 주차 요금 계산 로직 |
 
@@ -227,19 +233,19 @@ led/
 | --- | --- | --- |
 | 입구 조도센서 | `A0` | `sketches/uno_gate/uno_gate.ino` |
 | 출구 조도센서 | `A1` | `sketches/uno_gate/uno_gate.ino` |
-| 입구 차단기 서보모터 | `9` | `sketches/uno_gate/uno_gate.ino` |
-| 출구 차단기 서보모터 | `10` | `sketches/uno_gate/uno_gate.ino` |
-| 만차 경고 LED | `12` | `sketches/uno_gate/uno_gate.ino` |
-| 만차 경고 부저 | `11` | `sketches/uno_gate/uno_gate.ino` |
-| 1번 칸 초음파 TRIG | `D6` | `주차칸/parking_slots.h` |
-| 1번 칸 초음파 ECHO | `D3` | `주차칸/parking_slots.h` |
-| 2번 칸 초음파 TRIG | `D7` | `주차칸/parking_slots.h` |
-| 2번 칸 초음파 ECHO | `D4` | `주차칸/parking_slots.h` |
-| 1번 칸 빨간 LED | `D9` | `주차칸/parking_slots.h` |
-| 1번 칸 초록 LED | `D10` | `주차칸/parking_slots.h` |
-| 2번 칸 빨간 LED | `D11` | `주차칸/parking_slots.h` |
-| 2번 칸 초록 LED | `D12` | `주차칸/parking_slots.h` |
-| I2C LCD | SDA / SCL | `주차칸/parking_display.h` |
+| 입구 차단기 서보모터 | `D9` | `sketches/uno_gate/uno_gate.ino` |
+| 출구 차단기 서보모터 | `D8` | `sketches/uno_gate/uno_gate.ino` |
+| I2C LCD | `A4(SDA)`, `A5(SCL)` | `sketches/uno_gate/uno_gate.ino` |
+| Uno 1 ↔ Wemos Gateway | `D2(RX)`, `D3(TX)` | `sketches/uno_gate/uno_gate.ino` |
+| 1번 칸 초음파 TRIG | `D4` | `sketches/uno_slots/uno_slots.ino` |
+| 1번 칸 초음파 ECHO | `D5` | `sketches/uno_slots/uno_slots.ino` |
+| 2번 칸 초음파 TRIG | `D6` | `sketches/uno_slots/uno_slots.ino` |
+| 2번 칸 초음파 ECHO | `D7` | `sketches/uno_slots/uno_slots.ino` |
+| 1번 칸 빨간 LED | `D8` | `sketches/uno_slots/uno_slots.ino` |
+| 1번 칸 초록 LED | `D9` | `sketches/uno_slots/uno_slots.ino` |
+| 2번 칸 빨간 LED | `D10` | `sketches/uno_slots/uno_slots.ino` |
+| 2번 칸 초록 LED | `D11` | `sketches/uno_slots/uno_slots.ino` |
+| Uno 2 ↔ Wemos Gateway | `D2(RX)`, `D3(TX)` | `sketches/uno_slots/uno_slots.ino` |
 
 ---
 
@@ -251,20 +257,60 @@ led/
 
 ![Arduino Uno 1 회로도](docs/circuits/arduino_uno_1_gate.svg)
 
-조립할 때는 아래 상세 브레드보드 배선도를 기준으로 연결하면 됩니다.
-
-![Arduino Uno 1 브레드보드 상세 회로도](docs/circuits/arduino_uno_1_gate_breadboard.svg)
-
 포함된 연결:
 
 - 입구 조도센서: `A0`
 - 출구 조도센서: `A1`
 - 입구 차단기 서보모터: `D9`
-- 출구 차단기 서보모터: `D10`
-- 만차 경고 부저: `D11`
-- 만차 경고 LED: `D12`
+- 출구 차단기 서보모터: `D8`
 - I2C LCD: `A4(SDA)`, `A5(SCL)`
 - Wemos Gateway 통신: `D2`, `D3`
+
+### Arduino Uno 2: 주차칸 감지 및 LED 표시
+
+아래 회로도는 `sketches/uno_slots/uno_slots.ino` 기준입니다.
+
+![Arduino Uno 2 회로도](docs/circuits/arduino_uno_2_slots.svg)
+
+포함된 연결:
+
+- 1번 칸 초음파센서: `D4(TRIG)`, `D5(ECHO)`
+- 2번 칸 초음파센서: `D6(TRIG)`, `D7(ECHO)`
+- 1번 칸 LED: 빨강 `D8`, 초록 `D9`
+- 2번 칸 LED: 빨강 `D10`, 초록 `D11`
+- Wemos Gateway 통신: `D2`, `D3`
+
+### Wemos Gateway: Wi-Fi 요금 서버 중계
+
+아래 회로도는 `sketches/wemos_gateway/wemos_gateway.ino` 기준입니다.
+
+![Wemos Gateway 회로도](docs/circuits/wemos_gateway.svg)
+
+포함된 연결:
+
+- Arduino Uno 1 차단기 보드: Wemos `D5(RX)`, `D6(TX)`
+- Arduino Uno 2 주차칸 보드: Wemos `D7(RX)`, `D8(TX)`
+- 요금 서버 통신: Wi-Fi HTTP GET 요청
+- 공통 GND: Uno 1, Uno 2, Wemos 모두 연결
+
+### Wemos Monitor: 요금 서버 상태 확인
+
+아래 회로도는 `sketches/wemos_monitor/wemos_monitor.ino` 기준입니다.
+
+![Wemos Monitor 회로도](docs/circuits/wemos_monitor.svg)
+
+포함된 연결:
+
+- USB 전원 및 시리얼 모니터
+- Wi-Fi 요금 서버 세션 조회
+- 외부 센서 배선 없음
+
+구성 방법:
+
+- Wemos D1 R1 2번 보드는 PC와 USB 케이블로만 연결합니다.
+- `sketches/wemos_monitor/wemos_monitor.ino`의 `WIFI_SSID`, `WIFI_PASSWORD`, `FEE_SERVER_SESSIONS_URL`을 실제 환경에 맞게 수정합니다.
+- Arduino IDE 시리얼 모니터는 `115200 baud`로 엽니다.
+- 정상 동작하면 5초마다 `/parking/sessions` 응답 JSON이 시리얼 모니터에 출력됩니다.
 
 ---
 
@@ -274,9 +320,10 @@ led/
 
 | 분류 | 부품 | 개수 | 용도 |
 | --- | --- | ---: | --- |
-| 보드 | Wemos D1 R1 | 1개 | 센서 입력, LED/LCD/서보 제어, 요금 서버 통신 |
+| 보드 | Arduino Uno | 2개 | 차단기 제어, 주차칸 감지 |
+| 보드 | Wemos D1 R1 | 2개 | 요금 서버 게이트웨이, 서버 상태 모니터 |
 | 회로 구성 | 브레드보드 | 1개 이상 | 센서와 LED 회로 구성 |
-| 배선 | 점퍼 와이어 | 충분히 | 보드, 센서, LED, LCD, 부저 연결 |
+| 배선 | 점퍼 와이어 | 충분히 | 보드, 센서, LED, LCD, 서보 연결 |
 | 입출구 감지 | 조도센서 | 2개 | 입구 차량과 출구 차량 감지 |
 | 입출구 감지 | 조도센서용 저항 | 2개 | 조도센서 분압 회로 구성 |
 | 주차칸 감지 | HC-SR04 초음파센서 | 2개 | 1번/2번 주차칸 차량 점유 확인 |
@@ -285,10 +332,7 @@ led/
 | 차단기 | 차단기 막대 재료 | 2개 | 실제 차단기 팔 역할 |
 | 주차칸 LED | 빨간색 LED | 2개 | 각 주차칸 차량 점유 표시 |
 | 주차칸 LED | 초록색 LED | 2개 | 각 주차칸 빈자리 표시 |
-| 만차 경고 | 빨간색 LED | 1개 | 만차 경고 표시 |
-| 만차 경고 | 부저 | 1개 | 만차 경고음 출력 |
-| LED 보호 | LED용 저항 | 5개 이상 | LED 전류 제한 |
-| 전압 보호 | 전압 분배용 저항 | 4개 이상 | HC-SR04 ECHO 5V 신호를 ESP8266 입력에 맞춤 |
+| LED 보호 | LED용 저항 | 4개 이상 | LED 전류 제한 |
 | 서버 | Node.js 실행 PC | 1대 | Express 요금 계산 서버 실행 |
 
 ### 선택 부품
@@ -309,10 +353,10 @@ led/
 ### 입구/출구 조도센서 기준
 
 ```cpp
-const int LIGHT_BLOCKED_THRESHOLD = 350;
+const int LIGHT_BLOCKED_THRESHOLD = 200;
 ```
 
-평상시 조도 값이 `400~500`대이고 차량이 센서를 가리면 `300` 이하로 내려가는 상황을 기준으로 잡았습니다. 조도 값이 `350` 이하이면 차량이 감지된 것으로 판단합니다.
+평상시 조도 값이 `400~500`대이고 차량이 센서를 가리면 `300` 이하로 내려가는 상황을 기준으로 잡았습니다. 현재는 조도 값이 `200` 이하이면 차량이 감지된 것으로 판단합니다.
 
 ### 주차칸 차량 감지 거리
 
@@ -322,14 +366,15 @@ const int SLOT_OCCUPIED_DISTANCE_CM = 5;
 
 초음파센서가 `5cm` 이하를 감지하면 해당 주차칸을 점유 상태로 봅니다.
 
-### 차단기 각도
+### 차단기 서보 신호
 
 ```cpp
-const int BARRIER_CLOSED_ANGLE = 0;
-const int BARRIER_OPEN_ANGLE = 90;
+const int SERVO_STOP_ANGLE = 90;
+const int SERVO_OPEN_ROTATE_ANGLE = 180;
+const int SERVO_CLOSE_ROTATE_ANGLE = 0;
 ```
 
-빈자리가 있으면 `90도`, 만차 또는 대기 상태에서는 `0도`로 제어합니다.
+연속회전형 서보 기준입니다. `90`은 정지, `180`과 `0`은 양방향 회전 신호로 사용합니다.
 
 ### 요금 서버 주소
 
@@ -406,11 +451,11 @@ Wemos 코드에서는 `localhost`가 아니라 서버 PC의 내부 IP를 사용�
 
 ### 2. Wemos 설정
 
-`요금/fee_request.h`에서 Wi-Fi와 서버 주소를 수정합니다.
+Wemos 스케치 상단에서 Wi-Fi와 서버 주소를 수정합니다. 현재 Wi-Fi 기본값은 `iptime / 00000000`입니다.
 
 ```cpp
-const char WIFI_SSID[] = "YOUR_WIFI_SSID";
-const char WIFI_PASSWORD[] = "YOUR_WIFI_PASSWORD";
+const char WIFI_SSID[] = "iptime";
+const char WIFI_PASSWORD[] = "00000000";
 const char FEE_SERVER_BASE_URL[] = "http://192.168.0.10:3000";
 ```
 
@@ -459,9 +504,8 @@ sketches/test/uno_gate_test/uno_gate_test.ino
 ## ⚠️ 하드웨어 주의사항
 
 - Wemos D1 R1의 실제 사용 가능 핀은 보드 패키지와 보드 종류에 따라 다를 수 있습니다.
-- `D9`, `D10`, `D11`, `D12`는 환경에 따라 바로 인식되지 않을 수 있어 실제 보드 핀맵 확인이 필요합니다.
-- HC-SR04의 ECHO는 보통 5V로 출력되므로 ESP8266 입력에는 전압 분배 회로를 사용하는 것이 안전합니다.
-- I2C LCD 주소가 `0x27`이 아니면 `주차칸/parking_display.h`의 `LCD_ADDRESS` 값을 바꿔야 합니다.
+- Wemos Gateway의 `D5`~`D8` SoftwareSerial 통신은 보드 패키지와 배선 상태에 따라 안정성이 달라질 수 있어 실제 보드에서 확인이 필요합니다.
+- I2C LCD 주소가 `0x27`이 아니면 `sketches/uno_gate/uno_gate.ino`의 LCD 주소 값을 바꿔야 합니다.
 - 입구와 출구는 조도센서를 각각 1개씩 사용합니다. 평상시 값과 차량 통과 시 값을 시리얼 모니터로 확인한 뒤 `LIGHT_BLOCKED_THRESHOLD`를 조정하면 됩니다.
 - 현재 폴더명은 가독성을 위해 한글(`차단기`, `주차칸`, `요금`)로 정리되어 있습니다. 일부 Arduino CLI/ESP8266 빌드 환경에서는 한글 include 경로가 깨질 수 있으므로, 컴파일 오류가 나면 폴더명을 ASCII로 되돌려야 합니다.
 
@@ -474,7 +518,6 @@ sketches/test/uno_gate_test/uno_gate_test.ino
 - ✅ 칸별 빨간/초록 LED 표시
 - ✅ LCD 상태 표시
 - ✅ 서보모터 차단기 제어
-- ✅ 만차 경고 LED/부저 제어
 - ✅ 입차 서버 등록
 - ✅ 2단계 출차 확정 로직
 - ✅ 출차 요금 계산 및 LCD 표시

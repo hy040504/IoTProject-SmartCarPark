@@ -3,8 +3,8 @@
 #include <ESP8266WiFi.h>
 #include <SoftwareSerial.h>
 
-const char WIFI_SSID[] = "YOUR_WIFI_SSID";                 // 접속할 Wi-Fi 이름
-const char WIFI_PASSWORD[] = "YOUR_WIFI_PASSWORD";         // 접속할 Wi-Fi 비밀번호
+const char WIFI_SSID[] = "iptime";                         // 접속할 Wi-Fi 이름
+const char WIFI_PASSWORD[] = "00000000";                   // 접속할 Wi-Fi 비밀번호
 const char FEE_SERVER_BASE_URL[] = "http://192.168.0.10:3000"; // 요금 서버 기본 주소
 
 const int GATE_RX_PIN = D5;       // 차단기 Uno 송신선을 받는 핀

@@ -2,8 +2,8 @@
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
 
-const char WIFI_SSID[] = "YOUR_WIFI_SSID";             // 접속할 Wi-Fi 이름
-const char WIFI_PASSWORD[] = "YOUR_WIFI_PASSWORD";     // 접속할 Wi-Fi 비밀번호
+const char WIFI_SSID[] = "iptime";                     // 접속할 Wi-Fi 이름
+const char WIFI_PASSWORD[] = "00000000";               // 접속할 Wi-Fi 비밀번호
 const char FEE_SERVER_SESSIONS_URL[] = "http://192.168.0.10:3000/parking/sessions"; // 세션 조회 API 주소
 const unsigned long POLL_INTERVAL_MS = 5000;           // 서버 상태 조회 주기
 

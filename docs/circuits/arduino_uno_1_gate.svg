@@ -41,10 +41,8 @@
   <g>
     <circle cx="990" cy="330" r="8" fill="#fff"/><text x="910" y="335" class="pin">D2 RX</text>
     <circle cx="990" cy="375" r="8" fill="#fff"/><text x="910" y="380" class="pin">D3 TX</text>
+    <circle cx="990" cy="420" r="8" fill="#fff"/><text x="922" y="425" class="pin">D8</text>
     <circle cx="990" cy="465" r="8" fill="#fff"/><text x="922" y="470" class="pin">D9</text>
-    <circle cx="990" cy="510" r="8" fill="#fff"/><text x="915" y="515" class="pin">D10</text>
-    <circle cx="990" cy="555" r="8" fill="#fff"/><text x="915" y="560" class="pin">D11</text>
-    <circle cx="990" cy="600" r="8" fill="#fff"/><text x="915" y="605" class="pin">D12</text>
   </g>
 
   <!-- Power rails -->
@@ -112,25 +110,10 @@
   <text x="1120" y="545" class="label">출구 차단기 서보</text>
   <rect x="1160" y="575" width="150" height="70" fill="#d6e4ff" stroke="#174ea6" stroke-width="2" rx="8"/>
   <text x="1195" y="617" class="label">Servo OUT</text>
-  <text x="1120" y="665" class="small">Signal→D10, V+→5V, GND→공통 GND</text>
-  <path d="M990 510 L1160 610" class="wireSig"/>
+  <text x="1120" y="665" class="small">Signal→D8, V+→5V, GND→공통 GND</text>
+  <path d="M990 420 L1160 610" class="wireSig"/>
   <path d="M500 205 L1420 205 L1420 595 L1310 595" class="wire5v"/>
   <path d="M520 225 L1440 225 L1440 630 L1310 630" class="wireGnd"/>
-
-  <!-- Alert LED/Buzzer -->
-  <rect x="1090" y="730" width="410" height="180" class="module"/>
-  <text x="1120" y="765" class="label">만차 경고 LED / 부저</text>
-  <circle cx="1160" cy="815" r="22" fill="#ff6b6b" stroke="#9b1c1c" stroke-width="2"/>
-  <text x="1144" y="820" class="small">LED</text>
-  <rect x="1235" y="795" width="80" height="40" fill="#fce8b2" stroke="#a15c00" rx="5"/>
-  <text x="1253" y="820" class="small">220Ω</text>
-  <circle cx="1390" cy="815" r="26" fill="#e8eaed" stroke="#3c4043" stroke-width="2"/>
-  <text x="1370" y="820" class="small">Buzzer</text>
-  <text x="1120" y="880" class="small">D12→저항→LED→GND, D11→부저+ / 부저-→GND</text>
-  <path d="M990 600 L1235 815" class="wireWarn"/>
-  <path d="M1160 837 L1160 930 L520 930 L520 225" class="wireGnd"/>
-  <path d="M990 555 L1390 789" class="wireWarn"/>
-  <path d="M1390 841 L1390 950 L520 950 L520 225" class="wireGnd"/>
 
   <!-- Wemos connector -->
   <rect x="1060" y="70" width="470" height="170" class="note"/>
@@ -151,11 +134,10 @@
   <line x1="780" y1="965" x2="840" y2="965" class="wireSig"/><text x="855" y="970" class="small">센서/서보 신호</text>
   <line x1="780" y1="990" x2="840" y2="990" class="wireI2c"/><text x="855" y="995" class="small">I2C</text>
   <line x1="620" y1="1015" x2="680" y2="1015" class="wireData"/><text x="695" y="1020" class="small">보드 간 통신</text>
-  <line x1="780" y1="1015" x2="840" y2="1015" class="wireWarn"/><text x="855" y="1020" class="small">경고 장치</text>
 
   <!-- Threshold note -->
   <rect x="80" y="965" width="420" height="80" class="note"/>
   <text x="110" y="995" class="label">조도 기준값</text>
   <text x="110" y="1022" class="small">평상시 400~500, 차량 통과 시 300 이하</text>
-  <text x="110" y="1043" class="small">코드 기준: LIGHT_BLOCKED_THRESHOLD = 350</text>
+  <text x="110" y="1043" class="small">코드 기준: LIGHT_BLOCKED_THRESHOLD = 200</text>
 </svg>
