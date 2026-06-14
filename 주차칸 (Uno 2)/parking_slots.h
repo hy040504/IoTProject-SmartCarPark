@@ -2,7 +2,7 @@
 #define PARKING_SLOTS_H
 
 #include <Arduino.h>
-#include "../요금/fee_request.h"
+#include "../요금 (NodeJs Server)/fee_request.h"
 #include "parking_display.h"
 
 const int SLOT_COUNT = 2;                       // 관리할 주차칸 개수

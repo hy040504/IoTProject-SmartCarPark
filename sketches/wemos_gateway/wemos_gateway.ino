@@ -5,7 +5,7 @@
 
 const char WIFI_SSID[] = "iptime";                         // 접속할 Wi-Fi 이름
 const char WIFI_PASSWORD[] = "00000000";                   // 접속할 Wi-Fi 비밀번호
-const char FEE_SERVER_BASE_URL[] = "http://192.168.0.10:3000"; // 요금 서버 기본 주소
+const char FEE_SERVER_BASE_URL[] = "http://10.27.17.73:3000";  // 요금 서버 기본 주소
 
 const int GATE_RX_PIN = D5;       // 차단기 Uno 송신선을 받는 핀
 const int GATE_TX_PIN = D6;       // 차단기 Uno 수신선으로 보내는 핀

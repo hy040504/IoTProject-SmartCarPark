@@ -1,18 +1,15 @@
-#include <SoftwareSerial.h>
-
-const int WEMOS_RX_PIN = 2;                  // Wemos 송신선을 받는 핀
-const int WEMOS_TX_PIN = 3;                  // Wemos 수신선으로 보내는 핀
 const int SLOT_COUNT = 2;                    // 관리할 주차칸 개수
-const int SLOT_OCCUPIED_DISTANCE_CM = 5;     // 차량으로 판단할 최대 거리
 const unsigned long ECHO_TIMEOUT_US = 30000; // 초음파 응답 대기 최대 시간
+const unsigned long SERIAL_LOG_INTERVAL_MS = 500; // 주차칸 상태 로그 출력 주기
 
-const int SLOT_TRIG_PINS[SLOT_COUNT] = {4, 6};       // 주차칸별 초음파 송신 핀
-const int SLOT_ECHO_PINS[SLOT_COUNT] = {5, 7};       // 주차칸별 초음파 수신 핀
+const int SLOT_OCCUPIED_DISTANCE_CM[SLOT_COUNT] = {8, 5}; // 주차칸별 차량 감지 거리
+const int SLOT_TRIG_PINS[SLOT_COUNT] = {4, 13};      // 주차칸별 초음파 송신 핀
+const int SLOT_ECHO_PINS[SLOT_COUNT] = {5, 12};      // 주차칸별 초음파 수신 핀
 const int SLOT_RED_LED_PINS[SLOT_COUNT] = {8, 10};   // 주차칸별 점유 표시 LED 핀
 const int SLOT_GREEN_LED_PINS[SLOT_COUNT] = {9, 11}; // 주차칸별 빈자리 표시 LED 핀
 
-SoftwareSerial wemosSerial(WEMOS_RX_PIN, WEMOS_TX_PIN); // Wemos 게이트웨이 통신 포트
-bool previousOccupied[SLOT_COUNT] = {false, false};     // 주차칸 상태 변화 감지용 이전 상태
+bool previousOccupied[SLOT_COUNT] = {false, false}; // 주차칸 상태 변화 감지용 이전 상태
+unsigned long lastSerialLoggedAt = 0;               // 마지막 주차칸 로그 출력 시각
 
 /**
  * 지정한 주차칸의 초음파 거리를 센티미터 단위로 측정한다.
@@ -36,13 +33,13 @@ float readDistanceCm(int slotIndex) {
 }
 
 /**
- * 지정한 주차칸이 점유 상태인지 판단한다.
+ * 측정 거리로 지정한 주차칸의 점유 상태를 판단한다.
  * @param {int} slotIndex - 확인할 주차칸 배열 인덱스
+ * @param {float} distanceCm - 초음파센서 측정 거리
  * @returns {bool} 차량이 있으면 true, 아니면 false
  */
-bool isSlotOccupied(int slotIndex) {
-  float distanceCm = readDistanceCm(slotIndex);
-  return distanceCm > 0 && distanceCm <= SLOT_OCCUPIED_DISTANCE_CM;
+bool isSlotOccupied(int slotIndex, float distanceCm) {
+  return distanceCm > 0 && distanceCm <= SLOT_OCCUPIED_DISTANCE_CM[slotIndex];
 }
 
 /**
@@ -57,13 +54,53 @@ void updateSlotLed(int slotIndex, bool occupied) {
 }
 
 /**
- * Wemos 게이트웨이에 주차칸 상태 변화 이벤트를 전송한다.
+ * Node.js 서버에 주차칸 상태 변화 이벤트를 전송한다.
  * @param {String} eventName - ENTRY 또는 VACATED 이벤트 이름
  * @param {int} slotId - 주차칸 번호
  * @returns {void} 반환값 없음
  */
 void sendSlotEvent(String eventName, int slotId) {
-  wemosSerial.println(eventName + "," + String(slotId));
+  Serial.println(eventName + "," + String(slotId));
+  Serial.print("Send event: ");
+  Serial.print(eventName);
+  Serial.print(",");
+  Serial.println(slotId);
+}
+
+/**
+ * 주차칸별 거리와 점유 상태를 시리얼 모니터에 출력한다.
+ * @param {float[]} distances - 주차칸별 측정 거리 배열
+ * @param {bool[]} occupiedSlots - 주차칸별 점유 상태 배열
+ * @returns {void} 반환값 없음
+ */
+void logSlotStatus(float distances[], bool occupiedSlots[]) {
+  if (millis() - lastSerialLoggedAt < SERIAL_LOG_INTERVAL_MS) {
+    return;
+  }
+
+  lastSerialLoggedAt = millis();
+
+  for (int index = 0; index < SLOT_COUNT; index++) {
+    Serial.print("Slot ");
+    Serial.print(index + 1);
+    Serial.print(": ");
+
+    if (distances[index] < 0) {
+      Serial.print("no echo");
+    } else {
+      Serial.print(distances[index]);
+      Serial.print(" cm, threshold ");
+      Serial.print(SLOT_OCCUPIED_DISTANCE_CM[index]);
+      Serial.print(" cm, ");
+      Serial.print(occupiedSlots[index] ? "occupied" : "empty");
+    }
+
+    if (index < SLOT_COUNT - 1) {
+      Serial.print(" | ");
+    }
+  }
+
+  Serial.println();
 }
 
 /**
@@ -71,8 +108,14 @@ void sendSlotEvent(String eventName, int slotId) {
  * @returns {void} 반환값 없음
  */
 void updateParkingSlots() {
+  float distances[SLOT_COUNT];
+  bool occupiedSlots[SLOT_COUNT];
+
   for (int index = 0; index < SLOT_COUNT; index++) {
-    bool occupied = isSlotOccupied(index);
+    distances[index] = readDistanceCm(index);
+    occupiedSlots[index] = isSlotOccupied(index, distances[index]);
+
+    bool occupied = occupiedSlots[index];
     int slotId = index + 1;
 
     updateSlotLed(index, occupied);
@@ -87,6 +130,20 @@ void updateParkingSlots() {
 
     previousOccupied[index] = occupied;
   }
+
+  logSlotStatus(distances, occupiedSlots);
+}
+
+/**
+ * 주차칸 감지 보드의 현재 핀 설정을 시리얼 모니터에 출력한다.
+ * @returns {void} 반환값 없음
+ */
+void printBootMessage() {
+  Serial.println();
+  Serial.println("=== Uno Slots Start ===");
+  Serial.println("Baud: 9600");
+  Serial.println("Slot 1: TRIG D4, ECHO D5, RED D8, GREEN D9, threshold 8 cm");
+  Serial.println("Slot 2: TRIG D13, ECHO D12, RED D10, GREEN D11, threshold 5 cm");
 }
 
 /**
@@ -95,7 +152,8 @@ void updateParkingSlots() {
  */
 void setup() {
   Serial.begin(9600);
-  wemosSerial.begin(9600);
+  delay(1000);
+  printBootMessage();
 
   for (int index = 0; index < SLOT_COUNT; index++) {
     pinMode(SLOT_TRIG_PINS[index], OUTPUT);
@@ -106,7 +164,7 @@ void setup() {
 }
 
 /**
- * 주차칸 상태를 반복 감지하고 Wemos 게이트웨이에 변화 이벤트를 보낸다.
+ * 주차칸 상태를 반복 감지하고 Node.js 서버에 변화 이벤트를 보낸다.
  * @returns {void} 반환값 없음
  */
 void loop() {

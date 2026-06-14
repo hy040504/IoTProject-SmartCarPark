@@ -1,6 +1,6 @@
 # 🚗 Smart Parking System
 
-Arduino Uno 2대와 Wemos D1 R1 2대를 사용하는 스마트 주차장 프로젝트입니다.  
+Arduino Uno 2대와 Node.js Serial Bridge를 사용하는 스마트 주차장 프로젝트입니다.  
 입구에서는 **조도센서**로 차량 접근을 감지하고, 내부 주차칸은 **초음파센서 2개**로 점유 상태를 확인합니다. 빈자리가 있으면 차단기를 열고, 만차이면 LCD에 `Parking Full`을 표시한 뒤 차단기를 닫힌 상태로 유지합니다. 주차 시간과 요금 계산은 별도의 **Node.js Express 요금 서버**가 담당합니다.
 
 ---
@@ -9,12 +9,12 @@ Arduino Uno 2대와 Wemos D1 R1 2대를 사용하는 스마트 주차장 프로�
 
 현재 보유한 보드 수를 기준으로 기능을 나눴습니다.
 
-| 보드 | 업로드할 스케치 | 담당 역할 |
+| 구성 요소 | 실행/업로드 대상 | 담당 역할 |
 | --- | --- | --- |
 | Arduino Uno 1 | `sketches/uno_gate/uno_gate.ino` | 입구/출구 조도센서, 입구/출구 차단기, LCD |
 | Arduino Uno 2 | `sketches/uno_slots/uno_slots.ino` | 주차칸 2개 초음파센서, 칸별 빨간/초록 LED |
-| Wemos D1 R1 1 | `sketches/wemos_gateway/wemos_gateway.ino` | Uno 보드 이벤트 수신, 요금 서버 GET 요청, 요금 응답 중계 |
-| Wemos D1 R1 2 | `sketches/wemos_monitor/wemos_monitor.ino` | 요금 서버 상태 확인용 보조 모니터 |
+| PC Node.js 서버 | `요금 (NodeJs Server)/fee-server/src/server.js` | Uno 2개 USB Serial 중계, 슬롯 상태 저장, 요금 계산 |
+| Wemos D1 R1 | `sketches/wemos_*` | 이전 Wi-Fi 구조 참고용, 현재 메인 흐름에서는 제외 |
 
 루트 폴더에는 통합 실행용 `.ino` 파일을 두지 않습니다. 실제 업로드 대상은 `sketches/` 아래의 보드별 `.ino` 파일이며, 루트의 `BOARD_UPLOAD_GUIDE.md`는 어떤 파일을 어느 보드에 업로드해야 하는지 안내합니다.
 
@@ -25,12 +25,13 @@ Arduino Uno 2대와 Wemos D1 R1 2대를 사용하는 스마트 주차장 프로�
 ```text
 Arduino Uno 2: 주차칸 감지
   └─ ENTRY,1 / VACATED,1 같은 문자열 전송
-      ↓ SoftwareSerial
-Wemos D1 R1 1: 요금 게이트웨이
-  ├─ /parking/entry?slot=1 요청
+      ↓ USB Serial
+Node.js 서버: Serial Bridge + 요금 계산
+  ├─ 슬롯별 입차 시간 저장
+  ├─ 빈자리 수 계산 후 EMPTY,n 전송
   ├─ 출차 대기 슬롯 저장
-  └─ 차단기 통과 이벤트 수신 시 /parking/exit?slot=1 요청
-      ↓ SoftwareSerial
+  └─ BARRIER_EXIT 수신 시 요금 계산
+      ↓ USB Serial
 Arduino Uno 1: 입구/출구 차단기/LCD
   ├─ EMPTY,n 수신 후 입차 가능 여부 판단
   ├─ 입구 차량 감지 시 입구 차단기 제어
@@ -38,7 +39,7 @@ Arduino Uno 1: 입구/출구 차단기/LCD
   └─ FEE,slot,fee 수신 후 LCD에 요금 표시
 ```
 
-핵심은 **Uno는 센서와 장치 제어**, **Wemos는 Wi-Fi와 서버 통신**을 맡는 구조입니다.
+핵심은 **Uno는 센서와 장치 제어**, **Node.js는 두 Uno의 USB Serial 중계와 요금 계산**을 맡는 구조입니다.
 
 ---
 
@@ -52,7 +53,7 @@ Arduino Uno 1: 입구/출구 차단기/LCD
 | 🚧 차단기 제어 | 입구 차단기와 출구 차단기를 각각 서보모터로 제어 |
 | 🔴🟢 칸별 LED | 차량 있음: 빨간 LED, 빈자리: 초록 LED |
 | 🧾 요금 계산 | 입차/출차 시간을 서버에 기록하고 주차 요금 계산 |
-| 🌐 서버 연동 | Wemos가 Express 서버에 GET 요청 전송 |
+| 🔌 서버 연동 | Node.js가 Uno 2개와 USB Serial로 직접 통신 |
 
 ---
 
@@ -144,7 +145,7 @@ Arduino Uno 1: 입구/출구 차단기/LCD
 차량이 특정 주차칸에 들어옴
 → 해당 칸 초음파센서가 차량 감지
 → 해당 칸 빨간 LED ON
-→ 요금 서버에 GET /parking/entry?slot=칸번호 요청
+→ Uno 2가 Node.js에 ENTRY,칸번호 전송
 → 서버가 입차 시간 저장
 ```
 
@@ -156,9 +157,9 @@ Arduino Uno 1: 입구/출구 차단기/LCD
 → 해당 칸 초록 LED ON
 
 2차 감지: 차량이 차단기를 통과함
-→ 요금 서버에 GET /parking/exit?slot=칸번호 요청
-→ 서버가 주차 시간과 요금 계산
-→ Wemos가 response에서 fee 값 추출
+→ Uno 1이 Node.js에 BARRIER_EXIT 전송
+→ Node.js가 출차 대기 슬롯의 주차 시간과 요금 계산
+→ Node.js가 Uno 1에 FEE,slot,fee 전송
 → LCD에 요금 표시
 ```
 
@@ -189,16 +190,15 @@ led/
 │   └── circuits/
 │       ├── arduino_uno_1_gate.svg
 │       ├── arduino_uno_2_slots.svg
-│       ├── wemos_gateway.svg
-│       └── wemos_monitor.svg
-├── 차단기/
+│       └── node_serial_bridge.svg
+├── 차단기 (Uno 1)/
 │   ├── barrier.h
 │   └── entrance_sensor.h
-├── 주차칸/
+├── 주차칸 (Uno 2)/
 │   ├── parking_slots.h
 │   ├── parking_display.h
 │   └── parking_alert.h       # 이전 모듈화 구조 참고용
-├── 요금/
+├── 요금 (NodeJs Server)/
 │   ├── fee_request.h
 │   └── fee-server/
 │       ├── package.json
@@ -215,13 +215,13 @@ led/
 | `BOARD_UPLOAD_GUIDE.md` | 보드별 업로드 대상 안내 |
 | `sketches/uno_gate/uno_gate.ino` | 입구/출구 조도센서, 입구/출구 차단기, LCD 제어 |
 | `sketches/uno_slots/uno_slots.ino` | 주차칸 감지와 칸별 LED 제어 |
-| `sketches/wemos_gateway/wemos_gateway.ino` | Uno 이벤트와 요금 서버 사이의 게이트웨이 |
-| `sketches/wemos_monitor/wemos_monitor.ino` | 요금 서버 상태 확인용 보조 모니터 |
+| `sketches/wemos_gateway/wemos_gateway.ino` | 이전 Wi-Fi 게이트웨이 구조 참고용 |
+| `sketches/wemos_monitor/wemos_monitor.ino` | 이전 서버 모니터 구조 참고용 |
 | `docs/circuits/*.svg` | 보드별 회로도 |
 | `sketches/test/*` | 센서, LCD, 서보 분리 테스트용 스케치 |
-| `차단기/`, `주차칸/`, `요금/fee_request.h` | 이전 모듈화 구조에서 사용하던 참고용 헤더 |
-| `요금/fee-server/src/server.js` | Express API 서버 |
-| `요금/fee-server/src/feeCalculator.js` | 주차 요금 계산 로직 |
+| `차단기 (Uno 1)/`, `주차칸 (Uno 2)/`, `요금 (NodeJs Server)/fee_request.h` | 이전 모듈화 구조에서 사용하던 참고용 헤더 |
+| `요금 (NodeJs Server)/fee-server/src/server.js` | Express API 서버 |
+| `요금 (NodeJs Server)/fee-server/src/feeCalculator.js` | 주차 요금 계산 로직 |
 
 ---
 
@@ -236,16 +236,16 @@ led/
 | 입구 차단기 서보모터 | `D9` | `sketches/uno_gate/uno_gate.ino` |
 | 출구 차단기 서보모터 | `D8` | `sketches/uno_gate/uno_gate.ino` |
 | I2C LCD | `A4(SDA)`, `A5(SCL)` | `sketches/uno_gate/uno_gate.ino` |
-| Uno 1 ↔ Wemos Gateway | `D2(RX)`, `D3(TX)` | `sketches/uno_gate/uno_gate.ino` |
+| Uno 1 ↔ Node.js 서버 | USB Serial `9600 baud` | `sketches/uno_gate/uno_gate.ino` |
 | 1번 칸 초음파 TRIG | `D4` | `sketches/uno_slots/uno_slots.ino` |
 | 1번 칸 초음파 ECHO | `D5` | `sketches/uno_slots/uno_slots.ino` |
-| 2번 칸 초음파 TRIG | `D6` | `sketches/uno_slots/uno_slots.ino` |
-| 2번 칸 초음파 ECHO | `D7` | `sketches/uno_slots/uno_slots.ino` |
+| 2번 칸 초음파 TRIG | `D13` | `sketches/uno_slots/uno_slots.ino` |
+| 2번 칸 초음파 ECHO | `D12` | `sketches/uno_slots/uno_slots.ino` |
 | 1번 칸 빨간 LED | `D8` | `sketches/uno_slots/uno_slots.ino` |
 | 1번 칸 초록 LED | `D9` | `sketches/uno_slots/uno_slots.ino` |
 | 2번 칸 빨간 LED | `D10` | `sketches/uno_slots/uno_slots.ino` |
 | 2번 칸 초록 LED | `D11` | `sketches/uno_slots/uno_slots.ino` |
-| Uno 2 ↔ Wemos Gateway | `D2(RX)`, `D3(TX)` | `sketches/uno_slots/uno_slots.ino` |
+| Uno 2 ↔ Node.js 서버 | USB Serial `9600 baud` | `sketches/uno_slots/uno_slots.ino` |
 
 ---
 
@@ -264,7 +264,7 @@ led/
 - 입구 차단기 서보모터: `D9`
 - 출구 차단기 서보모터: `D8`
 - I2C LCD: `A4(SDA)`, `A5(SCL)`
-- Wemos Gateway 통신: `D2`, `D3`
+- Node.js Serial Bridge 통신: USB Serial `9600 baud`
 
 ### Arduino Uno 2: 주차칸 감지 및 LED 표시
 
@@ -275,42 +275,26 @@ led/
 포함된 연결:
 
 - 1번 칸 초음파센서: `D4(TRIG)`, `D5(ECHO)`
-- 2번 칸 초음파센서: `D6(TRIG)`, `D7(ECHO)`
+- 2번 칸 초음파센서: `D13(TRIG)`, `D12(ECHO)`
 - 1번 칸 LED: 빨강 `D8`, 초록 `D9`
 - 2번 칸 LED: 빨강 `D10`, 초록 `D11`
-- Wemos Gateway 통신: `D2`, `D3`
+- Node.js Serial Bridge 통신: USB Serial `9600 baud`
 
-### Wemos Gateway: Wi-Fi 요금 서버 중계
+### Node.js Serial Bridge: 요금 서버와 보드 연결
 
-아래 회로도는 `sketches/wemos_gateway/wemos_gateway.ino` 기준입니다.
+아래 회로도는 `요금 (NodeJs Server)/fee-server/src/server.js` 기준입니다.
 
-![Wemos Gateway 회로도](docs/circuits/wemos_gateway.svg)
-
-포함된 연결:
-
-- Arduino Uno 1 차단기 보드: Wemos `D5(RX)`, `D6(TX)`
-- Arduino Uno 2 주차칸 보드: Wemos `D7(RX)`, `D8(TX)`
-- 요금 서버 통신: Wi-Fi HTTP GET 요청
-- 공통 GND: Uno 1, Uno 2, Wemos 모두 연결
-
-### Wemos Monitor: 요금 서버 상태 확인
-
-아래 회로도는 `sketches/wemos_monitor/wemos_monitor.ino` 기준입니다.
-
-![Wemos Monitor 회로도](docs/circuits/wemos_monitor.svg)
+![Node.js Serial Bridge 회로도](docs/circuits/node_serial_bridge.svg)
 
 포함된 연결:
 
-- USB 전원 및 시리얼 모니터
-- Wi-Fi 요금 서버 세션 조회
-- 외부 센서 배선 없음
+- Uno 1 USB Serial: `GATE_SERIAL_PORT`, 기본 `COM3`
+- Uno 2 USB Serial: `SLOT_SERIAL_PORT`, 기본 `COM5`
+- 통신 속도: `9600 baud`
+- 서버 상태 확인: `http://localhost:3000/serial/status`
+- 주차 세션 확인: `http://localhost:3000/parking/sessions`
 
-구성 방법:
-
-- Wemos D1 R1 2번 보드는 PC와 USB 케이블로만 연결합니다.
-- `sketches/wemos_monitor/wemos_monitor.ino`의 `WIFI_SSID`, `WIFI_PASSWORD`, `FEE_SERVER_SESSIONS_URL`을 실제 환경에 맞게 수정합니다.
-- Arduino IDE 시리얼 모니터는 `115200 baud`로 엽니다.
-- 정상 동작하면 5초마다 `/parking/sessions` 응답 JSON이 시리얼 모니터에 출력됩니다.
+Wemos 관련 스케치는 포트 인식 불량이 잦아 현재 시연용 메인 흐름에서 제외했고, 이전 Wi-Fi 구조 참고용으로만 남겼습니다.
 
 ---
 
@@ -321,7 +305,7 @@ led/
 | 분류 | 부품 | 개수 | 용도 |
 | --- | --- | ---: | --- |
 | 보드 | Arduino Uno | 2개 | 차단기 제어, 주차칸 감지 |
-| 보드 | Wemos D1 R1 | 2개 | 요금 서버 게이트웨이, 서버 상태 모니터 |
+| 서버 | Node.js 실행 PC | 1대 | USB Serial 중계와 요금 계산 서버 실행 |
 | 회로 구성 | 브레드보드 | 1개 이상 | 센서와 LED 회로 구성 |
 | 배선 | 점퍼 와이어 | 충분히 | 보드, 센서, LED, LCD, 서보 연결 |
 | 입출구 감지 | 조도센서 | 2개 | 입구 차량과 출구 차량 감지 |
@@ -333,7 +317,6 @@ led/
 | 주차칸 LED | 빨간색 LED | 2개 | 각 주차칸 차량 점유 표시 |
 | 주차칸 LED | 초록색 LED | 2개 | 각 주차칸 빈자리 표시 |
 | LED 보호 | LED용 저항 | 4개 이상 | LED 전류 제한 |
-| 서버 | Node.js 실행 PC | 1대 | Express 요금 계산 서버 실행 |
 
 ### 선택 부품
 
@@ -361,10 +344,10 @@ const int LIGHT_BLOCKED_THRESHOLD = 200;
 ### 주차칸 차량 감지 거리
 
 ```cpp
-const int SLOT_OCCUPIED_DISTANCE_CM = 5;
+const int SLOT_OCCUPIED_DISTANCE_CM[SLOT_COUNT] = {8, 5};
 ```
 
-초음파센서가 `5cm` 이하를 감지하면 해당 주차칸을 점유 상태로 봅니다.
+1번 칸 초음파센서는 `8cm` 이하, 2번 칸 초음파센서는 `5cm` 이하를 감지하면 해당 주차칸을 점유 상태로 봅니다.
 
 ### 차단기 서보 신호
 
@@ -376,13 +359,15 @@ const int SERVO_CLOSE_ROTATE_ANGLE = 0;
 
 연속회전형 서보 기준입니다. `90`은 정지, `180`과 `0`은 양방향 회전 신호로 사용합니다.
 
-### 요금 서버 주소
+### Serial Bridge 포트
 
-```cpp
-const char FEE_SERVER_BASE_URL[] = "http://192.168.0.10:3000";
+```bash
+set GATE_SERIAL_PORT=COM3
+set SLOT_SERIAL_PORT=COM5
+set SERIAL_BAUD_RATE=9600
 ```
 
-Wemos에서 접근할 수 있도록 서버 PC의 내부 IP 주소로 바꿔야 합니다.
+Node.js 서버가 Uno 1과 Uno 2 USB 포트를 직접 엽니다. 포트 번호는 PC 환경에 맞게 바꿔야 합니다.
 
 ---
 
@@ -436,7 +421,7 @@ Wemos에서 접근할 수 있도록 서버 PC의 내부 IP 주소로 바꿔야 �
 ### 1. 요금 서버 실행
 
 ```bash
-cd 요금/fee-server
+cd "요금 (NodeJs Server)/fee-server"
 npm install
 npm start
 ```
@@ -447,19 +432,17 @@ npm start
 http://localhost:3000
 ```
 
-Wemos 코드에서는 `localhost`가 아니라 서버 PC의 내부 IP를 사용해야 합니다.
+서버 실행 전 포트를 지정하려면 PowerShell에서 아래처럼 실행합니다.
 
-### 2. Wemos 설정
-
-Wemos 스케치 상단에서 Wi-Fi와 서버 주소를 수정합니다. 현재 Wi-Fi 기본값은 `iptime / 00000000`입니다.
-
-```cpp
-const char WIFI_SSID[] = "iptime";
-const char WIFI_PASSWORD[] = "00000000";
-const char FEE_SERVER_BASE_URL[] = "http://192.168.0.10:3000";
+```powershell
+$env:GATE_SERIAL_PORT='COM3'
+$env:SLOT_SERIAL_PORT='COM5'
+npm start
 ```
 
-### 3. Arduino 업로드
+Node.js 서버가 COM 포트를 열고 있는 동안에는 Arduino IDE 업로드가 실패할 수 있습니다. 업로드할 때는 서버를 먼저 종료합니다.
+
+### 2. Arduino 업로드
 
 보드별로 아래 스케치를 각각 업로드합니다.
 
@@ -467,8 +450,6 @@ const char FEE_SERVER_BASE_URL[] = "http://192.168.0.10:3000";
 | --- | --- | --- |
 | Arduino Uno 1 | Arduino Uno | `sketches/uno_gate/uno_gate.ino` |
 | Arduino Uno 2 | Arduino Uno | `sketches/uno_slots/uno_slots.ino` |
-| Wemos D1 R1 1 | LOLIN(WeMos) D1 R1 | `sketches/wemos_gateway/wemos_gateway.ino` |
-| Wemos D1 R1 2 | LOLIN(WeMos) D1 R1 | `sketches/wemos_monitor/wemos_monitor.ino` |
 
 현재 입구/출구 조도센서, LCD, 입구/출구 차단기 서보만 연결한 상태라면 아래 테스트 스케치를 먼저 업로드합니다.
 
@@ -488,6 +469,14 @@ sketches/test/uno_gate_test/uno_gate_test.ino
    LCD I2C 주소와 배선 확인
 ```
 
+Arduino Uno 2에 주차칸 초음파센서와 LED를 조립한 상태라면 아래 테스트 스케치로 센서와 LED를 먼저 확인합니다.
+
+```text
+sketches/test/uno_slots_test/uno_slots_test.ino
+```
+
+업로드 직후 LED 4개가 순서대로 켜지고, 이후 시리얼 모니터에 1번/2번 주차칸 거리값이 출력됩니다. 1번 칸은 `8cm` 이하, 2번 칸은 `5cm` 이하이면 해당 칸 빨간 LED가 켜지고, 비어 있으면 초록 LED가 켜집니다. `no echo`가 나오면 해당 초음파센서의 VCC/GND/TRIG/ECHO 배선을 확인합니다. 2번 칸 TRIG는 `D13`이라 측정 순간 Uno 내장 LED가 함께 깜빡일 수 있습니다.
+
 ---
 
 ## 📟 LCD 표시 상태
@@ -503,11 +492,11 @@ sketches/test/uno_gate_test/uno_gate_test.ino
 
 ## ⚠️ 하드웨어 주의사항
 
-- Wemos D1 R1의 실제 사용 가능 핀은 보드 패키지와 보드 종류에 따라 다를 수 있습니다.
-- Wemos Gateway의 `D5`~`D8` SoftwareSerial 통신은 보드 패키지와 배선 상태에 따라 안정성이 달라질 수 있어 실제 보드에서 확인이 필요합니다.
+- Node.js 서버가 Uno의 COM 포트를 열고 있으면 Arduino IDE 시리얼 모니터나 업로드가 같은 포트를 사용할 수 없습니다.
+- 업로드할 때는 Node.js 서버를 종료하고, 업로드 후 다시 서버를 실행합니다.
 - I2C LCD 주소가 `0x27`이 아니면 `sketches/uno_gate/uno_gate.ino`의 LCD 주소 값을 바꿔야 합니다.
 - 입구와 출구는 조도센서를 각각 1개씩 사용합니다. 평상시 값과 차량 통과 시 값을 시리얼 모니터로 확인한 뒤 `LIGHT_BLOCKED_THRESHOLD`를 조정하면 됩니다.
-- 현재 폴더명은 가독성을 위해 한글(`차단기`, `주차칸`, `요금`)로 정리되어 있습니다. 일부 Arduino CLI/ESP8266 빌드 환경에서는 한글 include 경로가 깨질 수 있으므로, 컴파일 오류가 나면 폴더명을 ASCII로 되돌려야 합니다.
+- 현재 폴더명은 가독성을 위해 `차단기 (Uno 1)`, `주차칸 (Uno 2)`, `요금 (NodeJs Server)`로 정리되어 있습니다. 공백과 괄호가 있으므로 터미널에서 경로를 사용할 때는 따옴표로 감싸야 합니다.
 
 ---
 
@@ -519,6 +508,7 @@ sketches/test/uno_gate_test/uno_gate_test.ino
 - ✅ LCD 상태 표시
 - ✅ 서보모터 차단기 제어
 - ✅ 입차 서버 등록
+- ✅ Node.js USB Serial Bridge
 - ✅ 2단계 출차 확정 로직
 - ✅ 출차 요금 계산 및 LCD 표시
 - ✅ Node.js Express 요금 서버
@@ -531,6 +521,6 @@ sketches/test/uno_gate_test/uno_gate_test.ino
 - Express 서버 GET 요청 테스트 완료
 - `sketches/uno_gate` Arduino Uno 컴파일 완료
 - `sketches/uno_slots` Arduino Uno 컴파일 완료
-- `sketches/wemos_gateway` Wemos D1 R1 컴파일 완료
-- `sketches/wemos_monitor` Wemos D1 R1 컴파일 완료
+- `요금 (NodeJs Server)/fee-server/src/server.js` Node.js 문법 확인 완료
+- `요금 (NodeJs Server)/fee-server` serialport 의존성 설치 완료
 - 한글 폴더명을 include하는 기존 통합 구조는 ESP8266 빌드 과정의 경로 인코딩 문제로 실패 확인

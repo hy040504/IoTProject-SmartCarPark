@@ -1,9 +1,10 @@
 스마트 주차장 프로젝트 인수인계 보고서
 작성일: 2026-06-11
+최종 업데이트: 2026-06-14
 
 1. 프로젝트 개요
 
-본 프로젝트는 Wemos D1 R1 보드를 기반으로 한 스마트 주차장 시스템이다.
+본 프로젝트는 Arduino Uno 2대와 Node.js Serial Bridge를 기반으로 한 스마트 주차장 시스템이다.
 입구에서는 조도센서로 차량 접근 여부를 판단하고, 내부 주차칸 2개는 초음파센서로 점유 여부를 확인한다.
 빈자리가 있으면 LCD에 Entrance Open을 표시하고 입구 차단기를 열며, 만차이면 LCD에 Parking Full을 표시하고 차단기를 닫힌 상태로 유지한다.
 주차 시간과 요금 계산은 별도의 Node.js Express 서버가 담당한다.
@@ -13,11 +14,10 @@
 현재 보드 구성:
 - Arduino Uno 1: sketches/uno_gate/uno_gate.ino 업로드, 입구/출구 조도센서, 입구/출구 차단기, LCD 담당
 - Arduino Uno 2: sketches/uno_slots/uno_slots.ino 업로드, 주차칸 2개 초음파센서와 칸별 LED 담당
-- Wemos D1 R1 1: sketches/wemos_gateway/wemos_gateway.ino 업로드, Uno 이벤트와 요금 서버 사이의 게이트웨이 담당
-- Wemos D1 R1 2: sketches/wemos_monitor/wemos_monitor.ino 업로드, 서버 상태 모니터링 담당
+- Node.js 서버: 요금 (NodeJs Server)/fee-server 실행, Uno 1/Uno 2 USB Serial 중계와 요금 계산 담당
 
 루트에는 통합 실행용 ino 파일을 두지 않는다.
-프로젝트가 4개 보드로 나뉘면서 실제 업로드 대상은 sketches 폴더 안의 보드별 ino 파일이다.
+프로젝트가 Uno 2개와 PC 서버로 나뉘면서 실제 업로드 대상은 sketches 폴더 안의 Uno별 ino 파일이다.
 BOARD_UPLOAD_GUIDE.md는 각 보드에 어떤 스케치를 업로드해야 하는지 안내하는 문서이다.
 
 1) 입구/출구 차량 감지
@@ -27,8 +27,8 @@ BOARD_UPLOAD_GUIDE.md는 각 보드에 어떤 스케치를 업로드해야 하�
 
 2) 주차칸 상태 확인
 - 초음파센서 2개가 각각 1번, 2번 주차칸의 점유 여부를 확인한다.
-- 주차칸/parking_slots.h에서 readSlotDistanceCm(), isSlotOccupied(), countEmptySlots()가 관련 로직을 담당한다.
-- 차량 감지 기준 거리는 SLOT_OCCUPIED_DISTANCE_CM = 5cm이다.
+- 주차칸 (Uno 2)/parking_slots.h에서 readSlotDistanceCm(), isSlotOccupied(), countEmptySlots()가 관련 로직을 담당한다.
+- 차량 감지 기준 거리는 1번 칸 8cm, 2번 칸 5cm이다.
 
 3) 입차 가능 판단
 - 입구에 차량이 있고 빈자리가 1개 이상이면 LCD에 Entrance Open을 표시한다.
@@ -43,15 +43,15 @@ BOARD_UPLOAD_GUIDE.md는 각 보드에 어떤 스케치를 업로드해야 하�
 5) 입차 등록
 - 차량이 실제 주차칸에 들어가면 해당 칸 초음파센서가 점유 상태로 전환된다.
 - 해당 칸 빨간 LED가 켜지고 초록 LED는 꺼진다.
-- 요금/fee_request.h의 sendVehicleEntryRequest(slotId)가 호출되어 Express 서버에 GET /parking/entry?slot=칸번호 요청을 보낸다.
+- Uno 2가 USB Serial로 Node.js 서버에 ENTRY,칸번호 이벤트를 보낸다.
 - 서버는 해당 칸의 입차 시간을 메모리에 저장한다.
 
 6) 2단계 출차 처리
 - 1차 감지: 차량이 주차칸에서 빠지면 해당 칸을 출차 대기 상태로 저장한다.
 - 이 시점에는 아직 서버에 출차 요청을 보내지 않는다.
-- 2차 감지: 차량이 출구 조도센서를 가리면 Arduino Uno 1이 Wemos 게이트웨이에 BARRIER_EXIT 이벤트를 보낸다.
-- Wemos 게이트웨이가 GET /parking/exit?slot=칸번호 요청을 보낸다.
-- 서버 response에서 fee 값을 추출하고 LCD에 요금을 표시한다.
+- 2차 감지: 차량이 출구 조도센서를 가리면 Arduino Uno 1이 Node.js 서버에 BARRIER_EXIT 이벤트를 보낸다.
+- Node.js 서버가 출차 대기 슬롯의 요금을 계산하고 Uno 1에 FEE,slot,fee 이벤트를 보낸다.
+- Uno 1이 LCD에 요금을 표시한다.
 - 출차를 2단계로 나눈 이유는 초음파센서 흔들림이나 일시적 오감지를 바로 출차로 처리하지 않기 위해서이다.
 
 3. 주요 파일 설명
@@ -63,36 +63,48 @@ BOARD_UPLOAD_GUIDE.md
 sketches/uno_gate/uno_gate.ino
 - 입구 조도센서와 출구 조도센서를 각각 읽는다.
 - 입구 차량 감지 시 빈자리 여부에 따라 입구 차단기를 제어한다.
-- 출구 차량 감지 시 출구 차단기를 열고 Wemos 게이트웨이에 BARRIER_EXIT 이벤트를 보낸다.
+- 출구 차량 감지 시 출구 차단기를 열고 Node.js 서버에 BARRIER_EXIT 이벤트를 보낸다.
 - 조도센서 튜닝을 위해 입구/출구 조도 값을 시리얼 모니터에 주기적으로 출력한다.
 
-주차칸/parking_slots.h
+주차칸 (Uno 2)/parking_slots.h
 - 주차칸 2개의 초음파센서와 칸별 LED를 담당한다.
 - 차량이 들어오면 입차 요청을 서버에 보낸다.
 - 차량이 빠지면 pendingExitSlotId에 출차 대기 칸 번호를 저장한다.
 - 차단기 통과가 감지되면 서버에 출차 요청을 보내고 LCD에 요금을 표시한다.
 
-주차칸/parking_display.h
+주차칸 (Uno 2)/parking_display.h
 - 이전 모듈화 구조에서 사용하던 LCD 표시 참고용 헤더이다.
 - 현재 실제 업로드 구조에서는 sketches/uno_gate/uno_gate.ino가 LCD를 직접 제어한다.
 
-차단기/barrier.h
+차단기 (Uno 1)/barrier.h
 - 이전 단일 보드 구조에서 사용하던 차단기 모듈이다.
 - 현재 실제 업로드 구조에서는 sketches/uno_gate/uno_gate.ino가 입구/출구 차단기를 직접 제어한다.
 
-요금/fee_request.h
-- Wemos가 Wi-Fi에 연결하고 Express 서버에 HTTP GET 요청을 보내는 역할을 한다.
-- Wi-Fi 이름, 비밀번호, 서버 주소는 이 파일 상단에서 수정한다.
-- FEE_SERVER_BASE_URL은 서버 PC의 내부 IP로 바꿔야 한다.
+요금 (NodeJs Server)/fee_request.h
+- 이전 Wemos Wi-Fi 구조에서 사용하던 HTTP 요청 참고용 헤더이다.
+- 현재 메인 구조에서는 Node.js 서버가 Uno 2개와 USB Serial로 직접 통신한다.
 
-요금/fee-server/src/server.js
-- Node.js Express 기반 요금 계산 서버이다.
-- /parking/entry, /parking/exit, /parking/sessions API를 제공한다.
+요금 (NodeJs Server)/fee-server/src/server.js
+- Node.js Express 기반 요금 계산 서버이자 USB Serial Bridge이다.
+- Uno 1과 Uno 2의 COM 포트를 열고 ENTRY, VACATED, BARRIER_EXIT 이벤트를 처리한다.
+- /parking/entry, /parking/exit, /parking/sessions, /serial/status API를 제공한다.
 - 현재 주차 세션은 메모리 Map에 저장되므로 서버를 재시작하면 기록은 초기화된다.
 
-요금/fee-server/src/feeCalculator.js
+요금 (NodeJs Server)/fee-server/src/feeCalculator.js
 - 주차 요금 계산 로직을 담당한다.
 - 기본 30분 1000원, 이후 10분마다 500원을 추가한다.
+
+docs/circuits/arduino_uno_1_gate.svg
+- Arduino Uno 1의 입구/출구 조도센서, LCD, 입구/출구 서보모터 배선을 정리한 회로도이다.
+- 현재 메인 구조에 맞게 Wemos 연결 없이 USB Serial로 Node.js 서버와 연결하는 형태로 작성되어 있다.
+
+docs/circuits/arduino_uno_2_slots.svg
+- Arduino Uno 2의 주차칸 초음파센서 2개와 칸별 빨간/초록 LED 배선을 정리한 회로도이다.
+- 2번 칸 초음파센서는 TRIG D13, ECHO D12 기준으로 작성되어 있다.
+
+docs/circuits/node_serial_bridge.svg
+- PC에서 실행되는 Node.js 서버가 Uno 1과 Uno 2를 각각 USB Serial로 연결하는 전체 통신 구조도이다.
+- 기본 포트는 GATE_SERIAL_PORT=COM3, SLOT_SERIAL_PORT=COM5, SERIAL_BAUD_RATE=9600 기준이다.
 
 4. 서버 API
 
@@ -118,36 +130,36 @@ GET /parking/sessions
 입구 차단기 서보모터: 9
 출구 차단기 서보모터: 8
 I2C LCD: A4(SDA) / A5(SCL)
-Uno 1 - Wemos Gateway 통신: D2(RX) / D3(TX)
+Uno 1 - Node.js 서버 통신: USB Serial 9600 baud
 1번 칸 초음파 TRIG / ECHO: D4 / D5
-2번 칸 초음파 TRIG / ECHO: D6 / D7
+2번 칸 초음파 TRIG / ECHO: D13 / D12
 1번 칸 빨간 / 초록 LED: D8 / D9
 2번 칸 빨간 / 초록 LED: D10 / D11
-Uno 2 - Wemos Gateway 통신: D2(RX) / D3(TX)
+Uno 2 - Node.js 서버 통신: USB Serial 9600 baud
 
-주의: Wemos D1 R1의 D5~D8 핀명은 보드 패키지에 따라 실제 GPIO 매핑이 다를 수 있으므로 업로드 전 보드 설정을 확인해야 한다.
+주의: Node.js 서버가 COM 포트를 열고 있으면 Arduino IDE 업로드나 시리얼 모니터가 같은 포트를 사용할 수 없다.
 
 6. 실행 방법
 
 요금 서버 실행:
-cd 요금/fee-server
+cd "요금 (NodeJs Server)/fee-server"
 npm install
 npm start
 
-Wemos 설정:
-sketches/wemos_gateway/wemos_gateway.ino와 sketches/wemos_monitor/wemos_monitor.ino 상단에서 Wi-Fi와 서버 주소를 확인한다.
-현재 Wi-Fi 기본값은 SSID iptime, 비밀번호 00000000이다.
+Serial Bridge 설정:
+GATE_SERIAL_PORT와 SLOT_SERIAL_PORT를 실제 Uno 1/Uno 2 COM 포트에 맞춘다.
+기본값은 GATE_SERIAL_PORT=COM3, SLOT_SERIAL_PORT=COM5, SERIAL_BAUD_RATE=9600이다.
 
 Arduino 업로드:
 Arduino IDE 또는 arduino-cli에서 각 보드에 맞는 스케치를 업로드한다.
 - Arduino Uno 1: sketches/uno_gate/uno_gate.ino
 - Arduino Uno 2: sketches/uno_slots/uno_slots.ino
-- Wemos D1 R1 1: sketches/wemos_gateway/wemos_gateway.ino
-- Wemos D1 R1 2: sketches/wemos_monitor/wemos_monitor.ino
 
 부분 테스트:
 - 현재 입구 조도센서, 출구 조도센서, LCD, 입구 차단기 서보, 출구 차단기 서보만 연결한 상태에서는 sketches/test/uno_gate_test/uno_gate_test.ino를 먼저 업로드한다.
-- 해당 테스트 스케치는 Wemos 통신이나 주차칸 센서 없이 조도값 출력과 서보 열림/닫힘만 확인한다.
+- 해당 테스트 스케치는 서버 통신이나 주차칸 센서 없이 조도값 출력과 서보 열림/닫힘만 확인한다.
+- Uno 2에 초음파센서 2개와 LED 4개만 연결한 상태에서는 sketches/test/uno_slots_test/uno_slots_test.ino를 먼저 업로드한다.
+- 해당 테스트 스케치는 주차칸별 거리값, no echo 상태, 빨간/초록 LED 전환 여부를 시리얼 모니터로 확인한다.
 
 7. 검증 결과
 
@@ -155,45 +167,36 @@ Arduino CLI 설치 완료:
 - 설치 버전: arduino-cli 1.5.1
 - 설치 경로: C:\Program Files\Arduino CLI\arduino-cli.exe
 
-ESP8266 보드 코어:
-- esp8266:esp8266 플랫폼 설치 확인
-- Wemos D1 R1 FQBN: esp8266:esp8266:d1
-
 Arduino 컴파일:
 - sketches/uno_gate: Arduino Uno 컴파일 성공
 - sketches/uno_slots: Arduino Uno 컴파일 성공
-- sketches/wemos_gateway: Wemos D1 R1 컴파일 성공
-- sketches/wemos_monitor: Wemos D1 R1 컴파일 성공
 - LiquidCrystal_I2C 라이브러리의 아키텍처 호환성 경고가 출력될 수 있으나 컴파일은 완료됨
 
 Node.js 서버:
 - server.js 문법 확인 완료
 - feeCalculator.js 문법 확인 완료
-- Express GET 요청 테스트 완료
+- serialport 의존성 설치 완료
 
 8. 현재 남은 작업 및 주의사항
 
-1) 실제 하드웨어 핀맵 검증
-- Wemos D1 R1의 D5~D8 SoftwareSerial 통신이 실제 보드에서 안정적인지 확인해야 한다.
+1) Serial 포트 검증
+- Uno 1과 Uno 2의 COM 포트가 바뀌면 서버 실행 전 GATE_SERIAL_PORT, SLOT_SERIAL_PORT를 수정해야 한다.
+- Node.js 서버 실행 중에는 같은 COM 포트로 Arduino IDE 업로드를 할 수 없다.
 
-2) Wi-Fi 및 서버 IP 설정
-- FEE_SERVER_BASE_URL의 192.168.0.10은 예시값이다.
-- 실제 서버 PC의 내부 IP로 변경해야 한다.
-
-3) 조도센서 기준값 튜닝
+2) 조도센서 기준값 튜닝
 - 현재 기준값은 200이다.
 - 평상시 값이 400~500대, 차량이 지나갈 때 300 이하로 내려가는 환경을 기준으로 설정했다.
 - 설치 위치나 주변 조명에 따라 LIGHT_BLOCKED_THRESHOLD 값을 조정해야 한다.
 
-4) 서버 데이터 영속화
+3) 서버 데이터 영속화
 - 현재 서버는 주차 기록을 메모리에 저장한다.
 - 서버 재시작 후에도 기록을 유지하려면 JSON 파일, SQLite, MySQL 등 저장소 연동이 필요하다.
 
-6) 한글 폴더명과 Arduino 컴파일 호환성
-- 현재 모듈 폴더는 요청에 따라 차단기, 주차칸, 요금으로 정리되어 있다.
+4) 한글 폴더명과 Arduino 컴파일 호환성
+- 현재 모듈 폴더는 요청에 따라 차단기 (Uno 1), 주차칸 (Uno 2), 요금 (NodeJs Server)로 정리되어 있다.
+- 공백과 괄호가 있으므로 터미널에서 경로를 사용할 때는 따옴표로 감싸야 한다.
 - Arduino CLI 1.5.1과 ESP8266 빌드 환경에서 한글 include 경로가 임시 빌드 폴더로 복사될 때 깨지는 문제가 확인되었다.
-- 영어 폴더명 상태에서는 Wemos D1 R1 컴파일이 성공했지만, 한글 폴더명 상태에서는 include 경로 인코딩 문제로 컴파일이 실패한다.
-- 실제 업로드 단계에서 같은 문제가 발생하면 폴더명을 barrier, parking, fee처럼 ASCII 이름으로 되돌리는 것이 가장 안전하다.
+- 실제 업로드 단계에서 include 경로 문제가 발생하면 폴더명을 barrier, parking, fee처럼 ASCII 이름으로 되돌리는 것이 가장 안전하다.
 
 9. GitHub 업로드 대상
 
@@ -207,4 +210,4 @@ https://github.com/hy040504/IoTProject-SmartCarPark
 - handover.txt
 - package.json / package-lock.json
 
-node_modules는 요금/fee-server/.gitignore에 의해 제외한다.
+node_modules는 요금 (NodeJs Server)/fee-server/.gitignore에 의해 제외한다.

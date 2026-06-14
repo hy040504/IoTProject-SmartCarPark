@@ -1,9 +1,6 @@
 #include <LiquidCrystal_I2C.h>
 #include <Servo.h>
-#include <SoftwareSerial.h>
 
-const int WEMOS_RX_PIN = 2;             // Wemos 송신선을 받는 핀
-const int WEMOS_TX_PIN = 3;             // Wemos 수신선으로 보내는 핀
 const int ENTRANCE_LIGHT_PIN = A0;      // 입구 차량 감지 조도센서 핀
 const int EXIT_LIGHT_PIN = A1;          // 출구 차량 감지 조도센서 핀
 const int ENTRANCE_SERVO_PIN = 9;       // 입구 차단기 서보모터 제어 핀
@@ -17,10 +14,9 @@ const unsigned long SERVO_ROTATE_TIME_MS = 650; // 차단기 1회 이동 시간
 const unsigned long GATE_OPEN_TIME_MS = 3000;   // 차단기 열림 유지 시간
 const unsigned long LIGHT_LOG_INTERVAL_MS = 1000; // 조도센서 로그 출력 주기
 
-SoftwareSerial wemosSerial(WEMOS_RX_PIN, WEMOS_TX_PIN); // Wemos 게이트웨이 통신 포트
-LiquidCrystal_I2C lcd(0x27, 16, 2);                     // 주차장 상태 표시 LCD
-Servo entranceBarrierServo;                             // 입구 차단기 제어 서보 객체
-Servo exitBarrierServo;                                 // 출구 차단기 제어 서보 객체
+LiquidCrystal_I2C lcd(0x27, 16, 2); // 주차장 상태 표시 LCD
+Servo entranceBarrierServo;         // 입구 차단기 제어 서보 객체
+Servo exitBarrierServo;             // 출구 차단기 제어 서보 객체
 
 enum BarrierPhase {
   BARRIER_STOPPED,
@@ -38,7 +34,7 @@ struct BarrierState {
 BarrierState entranceBarrier = {&entranceBarrierServo, BARRIER_STOPPED, 0}; // 입구 차단기 동작 상태
 BarrierState exitBarrier = {&exitBarrierServo, BARRIER_STOPPED, 0};         // 출구 차단기 동작 상태
 
-int cachedEmptySlots = 2;                  // Wemos에서 마지막으로 받은 빈자리 수
+int cachedEmptySlots = 2;                  // Node.js 서버에서 마지막으로 받은 빈자리 수
 bool previousEntranceDetected = false;     // 입구 감지 중복 처리 방지 상태
 bool previousExitDetected = false;         // 출차 감지 중복 처리 방지 상태
 unsigned long lastLightLoggedAt = 0;       // 마지막 조도 로그 출력 시각
@@ -142,11 +138,11 @@ void logLightValues(int entranceLightValue, int exitLightValue) {
 }
 
 /**
- * Wemos 게이트웨이에서 받은 한 줄 명령을 처리한다.
- * @param {String} line - Wemos가 전송한 명령 문자열
+ * Node.js 서버에서 받은 한 줄 명령을 처리한다.
+ * @param {String} line - Node.js 서버가 전송한 명령 문자열
  * @returns {void} 반환값 없음
  */
-void handleGatewayLine(String line) {
+void handleNodeLine(String line) {
   line.trim();
 
   if (line.startsWith("EMPTY,")) {
@@ -164,13 +160,13 @@ void handleGatewayLine(String line) {
 }
 
 /**
- * Wemos 게이트웨이에서 들어온 모든 명령을 읽는다.
+ * USB Serial로 들어온 Node.js 서버 명령을 읽는다.
  * @returns {void} 반환값 없음
  */
-void readGatewayMessages() {
-  while (wemosSerial.available()) {
-    String line = wemosSerial.readStringUntil('\n');
-    handleGatewayLine(line);
+void readNodeMessages() {
+  while (Serial.available()) {
+    String line = Serial.readStringUntil('\n');
+    handleNodeLine(line);
   }
 }
 
@@ -198,7 +194,7 @@ void handleEntranceVehicle(int entranceLightValue) {
 }
 
 /**
- * 출구 차량을 감지하면 Wemos 게이트웨이에 출차 확정을 알린다.
+ * 출구 차량을 감지하면 Node.js 서버에 출차 확정을 알린다.
  * @param {int} exitLightValue - 출구 조도센서 값
  * @returns {void} 반환값 없음
  */
@@ -206,7 +202,7 @@ void handleExitVehicle(int exitLightValue) {
   bool exitDetected = isVehicleDetectedByLight(exitLightValue);
 
   if (exitDetected && !previousExitDetected) {
-    wemosSerial.println("BARRIER_EXIT");
+    Serial.println("BARRIER_EXIT");
     showMessage("Exit Open", "Calculating...");
     if (exitBarrier.phase == BARRIER_STOPPED) {
       startOpeningGate(exitBarrier);
@@ -222,7 +218,6 @@ void handleExitVehicle(int exitLightValue) {
  */
 void setup() {
   Serial.begin(9600);
-  wemosSerial.begin(9600);
 
   lcd.init();
   lcd.backlight();
@@ -234,14 +229,14 @@ void setup() {
 }
 
 /**
- * 입구 감지, 차단기 통과 감지, 게이트웨이 메시지를 반복 처리한다.
+ * 입구 감지, 차단기 통과 감지, Node.js 서버 메시지를 반복 처리한다.
  * @returns {void} 반환값 없음
  */
 void loop() {
   int entranceLightValue = analogRead(ENTRANCE_LIGHT_PIN);
   int exitLightValue = analogRead(EXIT_LIGHT_PIN);
 
-  readGatewayMessages();
+  readNodeMessages();
   logLightValues(entranceLightValue, exitLightValue);
   handleEntranceVehicle(entranceLightValue);
   handleExitVehicle(exitLightValue);
