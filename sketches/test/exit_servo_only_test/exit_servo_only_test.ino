@@ -2,9 +2,9 @@
 
 const int EXIT_SERVO_PIN = 8;                 // 출구 서보 신호선 확인 핀
 const int SERVO_STOP_ANGLE = 90;              // 연속회전 서보 정지 신호
-const int SERVO_FORWARD_ANGLE = 180;          // 한쪽 방향 회전 신호
-const int SERVO_REVERSE_ANGLE = 0;            // 반대 방향 회전 신호
-const unsigned long SERVO_MOVE_TIME_MS = 1000; // 방향별 회전 유지 시간
+const int SERVO_CLOCKWISE_ANGLE = 0;          // 시계방향 회전 신호
+const int SERVO_COUNTERCLOCKWISE_ANGLE = 180; // 반시계방향 회전 신호
+const unsigned long SERVO_MOVE_TIME_MS = 250; // 방향별 회전 유지 시간
 const unsigned long SERVO_PAUSE_TIME_MS = 1500; // 동작 사이 대기 시간
 
 Servo exitServo;
@@ -37,7 +37,7 @@ void setup() {
 
   Serial.println("=== Exit Servo Only Test Start ===");
   Serial.println("Signal pin: D8");
-  Serial.println("Forward: 180, Stop: 90, Reverse: 0");
+  Serial.println("Clockwise: 0, Stop: 90, Counterclockwise: 180");
   delay(SERVO_PAUSE_TIME_MS);
 }
 
@@ -46,6 +46,6 @@ void setup() {
  * @returns {void} 반환값 없음
  */
 void loop() {
-  runServoStep(SERVO_FORWARD_ANGLE, "forward");
-  runServoStep(SERVO_REVERSE_ANGLE, "reverse");
+  runServoStep(SERVO_CLOCKWISE_ANGLE, "clockwise");
+  runServoStep(SERVO_COUNTERCLOCKWISE_ANGLE, "counterclockwise");
 }

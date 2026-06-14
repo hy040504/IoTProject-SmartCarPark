@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 const int SLOT_COUNT = 2;                       // 관리할 주차칸 개수
-const int SLOT_OCCUPIED_DISTANCE_CM[SLOT_COUNT] = {8, 5}; // 주차칸별 차량 감지 거리
+const int SLOT_OCCUPIED_DISTANCE_CM[SLOT_COUNT] = {16, 10}; // 주차칸별 차량 감지 거리
 const unsigned long SLOT_ECHO_TIMEOUT_US = 30000; // 초음파 응답 대기 최대 시간
 
 const int SLOT_TRIG_PINS[SLOT_COUNT] = {4, 13};     // 주차칸별 초음파 송신 핀

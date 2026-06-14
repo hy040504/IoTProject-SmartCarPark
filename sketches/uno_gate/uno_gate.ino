@@ -1,20 +1,23 @@
 #include <Servo.h>
 
-const int ENTRANCE_LIGHT_PIN = A0;      // 입구 차량 감지 조도센서 핀
-const int EXIT_LIGHT_PIN = A1;          // 출구 차량 감지 조도센서 핀
-const int ENTRANCE_SERVO_PIN = 9;       // 입구 차단기 서보모터 제어 핀
-const int EXIT_SERVO_PIN = 8;           // 출구 차단기 서보모터 제어 핀
+const int ENTRANCE_LIGHT_PIN = A0;
+const int EXIT_LIGHT_PIN = A1;
+const int ENTRANCE_SERVO_PIN = 9;
+const int EXIT_SERVO_PIN = 8;
 
-const int LIGHT_BLOCKED_THRESHOLD = 200;      // 차량 그림자로 판단할 조도 기준
-const int SERVO_STOP_ANGLE = 90;              // 연속회전 서보 정지 신호
-const int SERVO_OPEN_ROTATE_ANGLE = 180;      // 차단기 열림 방향 회전 신호
-const int SERVO_CLOSE_ROTATE_ANGLE = 0;       // 차단기 닫힘 방향 회전 신호
-const unsigned long SERVO_ROTATE_TIME_MS = 550; // 차단기 1회 이동 시간
-const unsigned long GATE_OPEN_TIME_MS = 3000;   // 차단기 열림 유지 시간
-const unsigned long LIGHT_LOG_INTERVAL_MS = 500; // 조도센서 로그 출력 주기
+const int LIGHT_BLOCKED_THRESHOLD = 200;
+const int SERVO_STOP_ANGLE = 90;
+const int ENTRANCE_SERVO_OPEN_ROTATE_ANGLE = 180;
+const int ENTRANCE_SERVO_CLOSE_ROTATE_ANGLE = 0;
+const int EXIT_SERVO_OPEN_ROTATE_ANGLE = 0;
+const int EXIT_SERVO_CLOSE_ROTATE_ANGLE = 180;
+const unsigned long ENTRANCE_SERVO_ROTATE_TIME_MS = 100;
+const unsigned long EXIT_SERVO_ROTATE_TIME_MS = 200;
+const unsigned long GATE_OPEN_TIME_MS = 3000;
+const unsigned long LIGHT_LOG_INTERVAL_MS = 500;
 
-Servo entranceBarrierServo;         // 입구 차단기 제어 서보 객체
-Servo exitBarrierServo;             // 출구 차단기 제어 서보 객체
+Servo entranceBarrierServo;
+Servo exitBarrierServo;
 
 enum BarrierPhase {
   BARRIER_STOPPED,
@@ -27,19 +30,22 @@ struct BarrierState {
   Servo* servo;
   BarrierPhase phase;
   unsigned long changedAt;
+  bool clockwise;
+  unsigned long rotateTimeMs;
 };
 
-BarrierState entranceBarrier = {&entranceBarrierServo, BARRIER_STOPPED, 0}; // 입구 차단기 동작 상태
-BarrierState exitBarrier = {&exitBarrierServo, BARRIER_STOPPED, 0};         // 출구 차단기 동작 상태
+BarrierState entranceBarrier = {&entranceBarrierServo, BARRIER_STOPPED, 0, false, ENTRANCE_SERVO_ROTATE_TIME_MS};
+BarrierState exitBarrier = {&exitBarrierServo, BARRIER_STOPPED, 0, true, EXIT_SERVO_ROTATE_TIME_MS};
 
-int cachedEmptySlots = 2;                  // Node.js 서버에서 마지막으로 받은 빈자리 수
-bool previousEntranceDetected = false;     // 입구 감지 중복 처리 방지 상태
-bool previousExitDetected = false;         // 출차 감지 중복 처리 방지 상태
-unsigned long lastLightLoggedAt = 0;       // 마지막 조도 로그 출력 시각
+int cachedEmptySlots = 2;
+bool previousEntranceDetected = false;
+bool previousExitDetected = false;
+unsigned long lastLightLoggedAt = 0;
+bool startupServoTestDone = false;
 
 /**
- * 연속회전 서보를 정지 상태로 둔다.
- * @param {Servo&} barrierServo - 제어할 차단기 서보 객체
+ * 서보를 정지 상태로 맞춘다.
+ * @param {Servo&} barrierServo - 제어할 서보
  * @returns {void} 반환값 없음
  */
 void stopGateServo(Servo& barrierServo) {
@@ -47,36 +53,36 @@ void stopGateServo(Servo& barrierServo) {
 }
 
 /**
- * 차단기 열림 방향으로 짧게 회전을 시작한다.
- * @param {BarrierState&} barrier - 제어할 차단기 상태
+ * 차단기 개방 동작을 시작한다.
+ * @param {BarrierState&} barrier - 차단기 상태
  * @returns {void} 반환값 없음
  */
 void startOpeningGate(BarrierState& barrier) {
-  barrier.servo->write(SERVO_OPEN_ROTATE_ANGLE);
+  barrier.servo->write(barrier.clockwise ? EXIT_SERVO_OPEN_ROTATE_ANGLE : ENTRANCE_SERVO_OPEN_ROTATE_ANGLE);
   barrier.phase = BARRIER_OPENING;
   barrier.changedAt = millis();
 }
 
 /**
- * 차단기 닫힘 방향으로 짧게 회전을 시작한다.
- * @param {BarrierState&} barrier - 제어할 차단기 상태
+ * 차단기 폐쇄 동작을 시작한다.
+ * @param {BarrierState&} barrier - 차단기 상태
  * @returns {void} 반환값 없음
  */
 void startClosingGate(BarrierState& barrier) {
-  barrier.servo->write(SERVO_CLOSE_ROTATE_ANGLE);
+  barrier.servo->write(barrier.clockwise ? EXIT_SERVO_CLOSE_ROTATE_ANGLE : ENTRANCE_SERVO_CLOSE_ROTATE_ANGLE);
   barrier.phase = BARRIER_CLOSING;
   barrier.changedAt = millis();
 }
 
 /**
- * 연속회전 서보가 계속 돌지 않도록 이동 시간 이후 정지시킨다.
- * @param {BarrierState&} barrier - 갱신할 차단기 상태
+ * 서보가 지정 시간 동안만 움직이도록 상태를 갱신한다.
+ * @param {BarrierState&} barrier - 차단기 상태
  * @returns {void} 반환값 없음
  */
 void updateGate(BarrierState& barrier) {
   unsigned long elapsed = millis() - barrier.changedAt;
 
-  if (barrier.phase == BARRIER_OPENING && elapsed >= SERVO_ROTATE_TIME_MS) {
+  if (barrier.phase == BARRIER_OPENING && elapsed >= barrier.rotateTimeMs) {
     stopGateServo(*barrier.servo);
     barrier.phase = BARRIER_OPEN;
     barrier.changedAt = millis();
@@ -88,25 +94,25 @@ void updateGate(BarrierState& barrier) {
     return;
   }
 
-  if (barrier.phase == BARRIER_CLOSING && elapsed >= SERVO_ROTATE_TIME_MS) {
+  if (barrier.phase == BARRIER_CLOSING && elapsed >= barrier.rotateTimeMs) {
     stopGateServo(*barrier.servo);
     barrier.phase = BARRIER_STOPPED;
   }
 }
 
 /**
- * 조도센서 값으로 차량 감지 여부를 판단한다.
- * @param {int} lightValue - 확인할 조도센서 값
- * @returns {bool} 차량이 감지되면 true, 아니면 false
+ * 조도값으로 차량 감지를 판단한다.
+ * @param {int} lightValue - 조도센서 값
+ * @returns {bool} 차량으로 판단되면 true
  */
 bool isVehicleDetectedByLight(int lightValue) {
   return lightValue <= LIGHT_BLOCKED_THRESHOLD;
 }
 
 /**
- * 조도센서 튜닝을 위해 입구와 출구 값을 주기적으로 출력한다.
- * @param {int} entranceLightValue - 입구 조도센서 값
- * @param {int} exitLightValue - 출구 조도센서 값
+ * 조도값을 0.5초마다 시리얼로 출력한다.
+ * @param {int} entranceLightValue - 입구 조도값
+ * @param {int} exitLightValue - 출구 조도값
  * @returns {void} 반환값 없음
  */
 void logLightValues(int entranceLightValue, int exitLightValue) {
@@ -122,8 +128,8 @@ void logLightValues(int entranceLightValue, int exitLightValue) {
 }
 
 /**
- * Node.js 서버에서 받은 한 줄 명령을 처리한다.
- * @param {String} line - Node.js 서버가 전송한 명령 문자열
+ * 서버가 보낸 빈자리 수를 반영한다.
+ * @param {String} line - 수신한 한 줄
  * @returns {void} 반환값 없음
  */
 void handleNodeLine(String line) {
@@ -131,13 +137,46 @@ void handleNodeLine(String line) {
 
   if (line.startsWith("EMPTY,")) {
     cachedEmptySlots = line.substring(6).toInt();
-    return;
   }
-
 }
 
 /**
- * USB Serial로 들어온 Node.js 서버 명령을 읽는다.
+ * 부팅 직후 차단기 동작 여부를 빠르게 점검한다.
+ * @param {BarrierState&} barrier - 점검할 차단기 상태
+ * @returns {void} 반환값 없음
+ */
+void runBarrierStartupTest(BarrierState& barrier) {
+  startOpeningGate(barrier);
+  delay(barrier.rotateTimeMs);
+  stopGateServo(*barrier.servo);
+  delay(300);
+
+  startClosingGate(barrier);
+  delay(barrier.rotateTimeMs);
+  stopGateServo(*barrier.servo);
+  barrier.phase = BARRIER_STOPPED;
+  barrier.changedAt = millis();
+  delay(300);
+}
+
+/**
+ * 부팅 직후 양쪽 차단기를 한 번씩 시험 동작시킨다.
+ * @returns {void} 반환값 없음
+ */
+void runStartupServoTest() {
+  if (startupServoTestDone) {
+    return;
+  }
+
+  startupServoTestDone = true;
+  Serial.println("=== Startup Servo Test Start ===");
+  runBarrierStartupTest(entranceBarrier);
+  runBarrierStartupTest(exitBarrier);
+  Serial.println("=== Startup Servo Test End ===");
+}
+
+/**
+ * USB Serial에서 서버 메시지를 읽는다.
  * @returns {void} 반환값 없음
  */
 void readNodeMessages() {
@@ -148,20 +187,32 @@ void readNodeMessages() {
 }
 
 /**
- * 입구 차량 감지 결과에 따라 차단기와 LCD를 제어한다.
+ * 입구 차량 감지에 따라 차단기를 제어한다.
+ * @param {int} entranceLightValue - 입구 조도값
  * @returns {void} 반환값 없음
  */
 void handleEntranceVehicle(int entranceLightValue) {
   bool entranceDetected = isVehicleDetectedByLight(entranceLightValue);
 
+  Serial.print("[entrance] light=");
+  Serial.print(entranceLightValue);
+  Serial.print(", detected=");
+  Serial.print(entranceDetected ? "1" : "0");
+  Serial.print(", prev=");
+  Serial.print(previousEntranceDetected ? "1" : "0");
+  Serial.print(", empty=");
+  Serial.println(cachedEmptySlots);
+
   if (entranceDetected && !previousEntranceDetected) {
+    Serial.print("ENTRANCE_DETECTED, Entrance Light: ");
+    Serial.println(entranceLightValue);
+
     if (cachedEmptySlots > 0) {
-      Serial.println("ENTRANCE_ALLOWED");
       if (entranceBarrier.phase == BARRIER_STOPPED) {
         startOpeningGate(entranceBarrier);
       }
     } else {
-      Serial.println("ENTRANCE_FULL");
+      Serial.println("[entrance] parking full");
       stopGateServo(entranceBarrierServo);
       entranceBarrier.phase = BARRIER_STOPPED;
     }
@@ -171,8 +222,8 @@ void handleEntranceVehicle(int entranceLightValue) {
 }
 
 /**
- * 출구 차량을 감지하면 Node.js 서버에 출차 확정을 알린다.
- * @param {int} exitLightValue - 출구 조도센서 값
+ * 출구 차량 감지에 따라 차단기를 제어한다.
+ * @param {int} exitLightValue - 출구 조도값
  * @returns {void} 반환값 없음
  */
 void handleExitVehicle(int exitLightValue) {
@@ -182,6 +233,7 @@ void handleExitVehicle(int exitLightValue) {
     Serial.print("BARRIER_EXIT, Exit Light: ");
     Serial.println(exitLightValue);
     Serial.println("BARRIER_EXIT");
+
     if (exitBarrier.phase == BARRIER_STOPPED) {
       startOpeningGate(exitBarrier);
     }
@@ -191,7 +243,7 @@ void handleExitVehicle(int exitLightValue) {
 }
 
 /**
- * 입구/차단기 제어 보드를 초기화한다.
+ * 입구와 출구 차단기를 초기화한다.
  * @returns {void} 반환값 없음
  */
 void setup() {
@@ -201,10 +253,13 @@ void setup() {
   exitBarrierServo.attach(EXIT_SERVO_PIN);
   stopGateServo(entranceBarrierServo);
   stopGateServo(exitBarrierServo);
+
+  delay(300);
+  runStartupServoTest();
 }
 
 /**
- * 입구 감지, 차단기 통과 감지, Node.js 서버 메시지를 반복 처리한다.
+ * 입구와 출구 센서 값을 계속 읽는다.
  * @returns {void} 반환값 없음
  */
 void loop() {

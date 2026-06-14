@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>관리자 페이지</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <section id="loginView" class="login-view">
+      <div class="login-panel">
+        <div class="login-hero">
+          <div class="brand-mark">Ad</div>
+          <div>
+            <p class="eyebrow">Smart Parking</p>
+            <h1>관리자 로그인</h1>
+          </div>
+        </div>
+        <p class="lead">실시간 주차칸 상태, 주차 시간, 예상 요금을 확인하는 운영 대시보드입니다.</p>
+
+        <form id="loginForm" class="login-form">
+          <label>
+            <span>ID</span>
+            <input id="username" name="username" autocomplete="username" placeholder="ID" required />
+          </label>
+          <label>
+            <span>Password</span>
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Password" required />
+          </label>
+          <button type="submit" class="primary-button">로그인</button>
+          <p id="loginError" class="error" aria-live="polite"></p>
+        </form>
+
+        <div class="login-meta">
+          <span class="status-pill warn">로그인 필요</span>
+          <span class="subtle">실시간 반영 SSE</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="dashboardView" class="dashboard-view hidden">
+      <section class="hero-banner">
+        <p class="eyebrow">Smart Parking Control</p>
+        <h2>스마트 주차장 (Smart Car Park) 관리자 페이지</h2>
+        <p class="lead compact">주차칸 점유 상태와 주차 시간, 예상 요금을 실시간으로 확인합니다.</p>
+      </section>
+
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Dashboard</p>
+          <h3>실시간 현황</h3>
+        </div>
+        <div class="topbar-right">
+          <span id="connectionStatus" class="status-pill warn">연결 대기</span>
+          <button id="themeToggleButton" class="theme-toggle-button" type="button">Dark</button>
+          <div class="user-chip" id="currentUser">Guest</div>
+          <button id="logoutButton" class="ghost-button" type="button">로그아웃</button>
+        </div>
+      </header>
+
+      <section class="metrics">
+        <article class="metric-card accent">
+          <span class="metric-label">주차중</span>
+          <strong id="occupiedCount">0</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">남은 주차칸</span>
+          <strong id="emptyCount">0</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">전체 칸</span>
+          <strong id="totalCount">0</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">현재 시각</span>
+          <strong id="lastUpdated">--:--:--</strong>
+        </article>
+      </section>
+
+      <section class="content-grid single-panel">
+        <article class="panel slots-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Slots</p>
+              <h3>주차칸 상태</h3>
+            </div>
+            <span class="panel-hint">칸별 점유 / 주차 시간 / 예상 요금</span>
+          </div>
+          <div class="slot-monitor-shell">
+            <div class="slot-monitor-body">
+              <div class="slot-monitor-header">
+                <h4>실시간 주차 세션 정보</h4>
+                <span id="slotLiveBadge" class="slot-live-badge">LIVE CONNECTED</span>
+              </div>
+              <div class="slot-table">
+                <div class="slot-table-head">
+                  <span>주차칸 ID</span>
+                  <span>주차 상태</span>
+                  <span>진입 시간</span>
+                  <span>경과 시간</span>
+                  <span>발생 요금</span>
+                </div>
+                <div id="slotList" class="slot-table-body"></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel fee-rule-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Fee Policy</p>
+              <h3>요금 책정 기준</h3>
+            </div>
+            <span class="panel-hint">현재 Node.js 서버 계산 로직 기준</span>
+          </div>
+          <div class="fee-rule-grid">
+            <article class="fee-rule-card">
+              <span class="fee-rule-label">기본 요금</span>
+              <strong>30분까지 1,000원</strong>
+            </article>
+            <article class="fee-rule-card">
+              <span class="fee-rule-label">추가 요금</span>
+              <strong>이후 10분당 500원</strong>
+            </article>
+            <article class="fee-rule-card wide">
+              <span class="fee-rule-label">계산 방식</span>
+              <p>주차 시간은 분 단위로 올림 계산되며, 1분 이상 주차하면 최소 1분으로 반영됩니다.</p>
+            </article>
+          </div>
+        </article>
+      </section>
+
+      <section class="credits-panel">
+        <div class="credits-head">
+          <p class="eyebrow">Project Team</p>
+          <h3>제작자 및 프로젝트 소개</h3>
+        </div>
+        <div class="credits-grid">
+          <article class="credit-card">
+            <span class="credit-label">제작자 1</span>
+            <strong>202311420 연승현</strong>
+          </article>
+          <article class="credit-card">
+            <span class="credit-label">제작자 2</span>
+            <strong>202311438 장기환</strong>
+          </article>
+          <article class="credit-card intro">
+            <span class="credit-label">프로젝트 소개</span>
+            <p>아두이노와 Node.js 서버를 연동해 입출차 제어, 주차칸 감지, LCD 안내, 관리자 모니터링까지 통합한 스마트 주차장 시스템입니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <footer class="page-footer">
+        <p>© 2026 Smart Car Park Project. All rights reserved.</p>
+      </footer>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

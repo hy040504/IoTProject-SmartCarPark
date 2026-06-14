@@ -1,22 +1,62 @@
+#include <Arduino.h>
+#include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include "parking_lcd_display.h"
 
-const int ENTRANCE_LCD_ADDRESS = 0x27; // 입구 LCD I2C 주소
-const int EXIT_LCD_ADDRESS = 0x3F;     // 출구 LCD I2C 주소
-const unsigned long TEMPORARY_MESSAGE_TIME_MS = 5000; // 안내 문구 유지 시간
+const int EXIT_LCD_ADDRESS_27 = 0x27;
+const int EXIT_LCD_ADDRESS_3F = 0x3F;
+const unsigned long TEMPORARY_MESSAGE_TIME_MS = 5000;
+const unsigned long SERIAL_ALIVE_INTERVAL_MS = 3000;
+const unsigned long DISPLAY_REFRESH_INTERVAL_MS = 1000;
 
-LiquidCrystal_I2C entranceLcd(ENTRANCE_LCD_ADDRESS, 16, 2); // 입구 안내 LCD
-LiquidCrystal_I2C exitLcd(EXIT_LCD_ADDRESS, 16, 2);         // 출구 안내 LCD
+LiquidCrystal_I2C exitLcd27(EXIT_LCD_ADDRESS_27, LCD_COLUMNS, LCD_ROWS);
+LiquidCrystal_I2C exitLcd3f(EXIT_LCD_ADDRESS_3F, LCD_COLUMNS, LCD_ROWS);
+LiquidCrystal_I2C* exitLcd = &exitLcd3f;
 
-int lastOccupiedSlots = 0;             // 기본 화면 복귀에 사용할 마지막 점유 수
-int lastTotalSlots = PARKING_TOTAL_SLOTS; // 기본 화면 복귀에 사용할 전체 주차칸 수
-unsigned long temporaryMessageUntil = 0;  // 안내 문구 표시 종료 시각
+int lastOccupiedSlots = 0;
+int lastTotalSlots = PARKING_TOTAL_SLOTS;
+String lastStatusDate = "--";
+String lastStatusTime = "--";
+unsigned long temporaryMessageUntil = 0;
+unsigned long lastAliveAt = 0;
+unsigned long lastDisplayRefreshAt = 0;
+int activeExitLcdAddress = EXIT_LCD_ADDRESS_3F;
+bool lcdReady = false;
+
+bool isI2cDevicePresent(int address) {
+  Wire.beginTransmission(address);
+  return Wire.endTransmission() == 0;
+}
+
+void selectExitLcd() {
+  if (isI2cDevicePresent(EXIT_LCD_ADDRESS_27)) {
+    exitLcd = &exitLcd27;
+    activeExitLcdAddress = EXIT_LCD_ADDRESS_27;
+    lcdReady = true;
+    Serial.println("LCD FOUND 0x27");
+    return;
+  }
+
+  if (isI2cDevicePresent(EXIT_LCD_ADDRESS_3F)) {
+    exitLcd = &exitLcd3f;
+    activeExitLcdAddress = EXIT_LCD_ADDRESS_3F;
+    lcdReady = true;
+    Serial.println("LCD FOUND 0x3F");
+    return;
+  }
+
+  exitLcd = &exitLcd3f;
+  activeExitLcdAddress = EXIT_LCD_ADDRESS_3F;
+  lcdReady = false;
+  Serial.println("LCD NOT FOUND");
+  Serial.println("CHECK SDA=A4 SCL=A5 VCC GND");
+}
 
 /**
- * 쉼표로 분리된 명령에서 지정 위치의 값을 추출한다.
- * @param {String} line - Node.js 서버에서 받은 명령 문자열
- * @param {int} fieldIndex - 추출할 필드 위치
- * @returns {String} 추출한 필드 값
+ * CSV에서 원하는 필드만 꺼낸다.
+ * @param {String} line - 수신한 한 줄
+ * @param {int} fieldIndex - 추출할 필드 번호
+ * @returns {String} 추출된 필드 문자열
  */
 String getCsvField(String line, int fieldIndex) {
   int currentField = 0;
@@ -37,24 +77,58 @@ String getCsvField(String line, int fieldIndex) {
 }
 
 /**
- * 기본 주차 현황 화면으로 되돌린다.
+ * 기본 상태를 출구 LCD에 다시 그린다.
  * @returns {void} 반환값 없음
  */
 void showDefaultStatus() {
-  showParkingStatus(entranceLcd, exitLcd, lastOccupiedSlots, lastTotalSlots);
+  if (!lcdReady) {
+    return;
+  }
+
+  showLcdMessage(
+    *exitLcd,
+    "Date " + lastStatusDate,
+    "Time " + lastStatusTime,
+    "Smart Parking Team",
+    "Cars: " + String(lastOccupiedSlots) + "/" + String(lastTotalSlots) + " | YSH JKH"
+  );
 }
 
 /**
- * 임시 안내 문구가 끝나는 시각을 갱신한다.
+ * 잠깐 보여줄 메시지의 종료 시각을 갱신한다.
  * @returns {void} 반환값 없음
  */
-void keepTemporaryMessage() {
+void rememberTemporaryMessage() {
   temporaryMessageUntil = millis() + TEMPORARY_MESSAGE_TIME_MS;
 }
 
 /**
- * Node.js 서버에서 받은 LCD 표시 명령을 처리한다.
- * @param {String} line - Node.js 서버가 전송한 명령 문자열
+ * 임시 경고 메시지를 지정 시간 동안 표시한다.
+ * @param {String} firstLine - 첫 번째 줄
+ * @param {String} secondLine - 두 번째 줄
+ * @param {String} thirdLine - 세 번째 줄
+ * @param {String} fourthLine - 네 번째 줄
+ * @param {unsigned long} durationMs - 표시 유지 시간
+ * @returns {void} 반환값 없음
+ */
+void showTemporaryMessage(
+  const String& firstLine,
+  const String& secondLine,
+  const String& thirdLine,
+  const String& fourthLine,
+  unsigned long durationMs
+) {
+  if (!lcdReady) {
+    return;
+  }
+
+  showLcdMessage(*exitLcd, firstLine, secondLine, thirdLine, fourthLine);
+  temporaryMessageUntil = millis() + durationMs;
+}
+
+/**
+ * 서버가 보낸 LCD 명령을 처리한다.
+ * @param {String} line - 수신한 한 줄
  * @returns {void} 반환값 없음
  */
 void handleDisplayCommand(String line) {
@@ -63,6 +137,8 @@ void handleDisplayCommand(String line) {
   if (line.startsWith("LCD_STATUS,")) {
     lastOccupiedSlots = getCsvField(line, 1).toInt();
     lastTotalSlots = getCsvField(line, 2).toInt();
+    lastStatusDate = getCsvField(line, 3);
+    lastStatusTime = getCsvField(line, 4);
 
     if (temporaryMessageUntil == 0) {
       showDefaultStatus();
@@ -71,29 +147,53 @@ void handleDisplayCommand(String line) {
     return;
   }
 
-  if (line.startsWith("LCD_ENTRANCE_WELCOME,")) {
-    int emptySlots = getCsvField(line, 1).toInt();
-    showEntranceWelcome(entranceLcd, emptySlots);
-    keepTemporaryMessage();
-    return;
-  }
-
-  if (line == "LCD_ENTRANCE_FULL") {
-    showParkingFull(entranceLcd);
-    keepTemporaryMessage();
-    return;
-  }
-
   if (line.startsWith("LCD_EXIT_FEE,")) {
     int slotId = getCsvField(line, 1).toInt();
     long fee = getCsvField(line, 2).toInt();
-    showExitFee(exitLcd, slotId, fee);
-    keepTemporaryMessage();
+    unsigned long parkedSeconds = getCsvField(line, 3).toInt();
+    String exitTime = getCsvField(line, 4);
+
+    if (exitTime.length() == 0) {
+      exitTime = "Now";
+    }
+
+    if (lcdReady) {
+      showExitFee(*exitLcd, slotId, fee, exitTime, parkedSeconds);
+    }
+
+    rememberTemporaryMessage();
+    return;
+  }
+
+  if (line.startsWith("LCD_FULL_WARNING,")) {
+    unsigned long durationMs = getCsvField(line, 1).toInt();
+    int occupiedSlots = getCsvField(line, 2).toInt();
+    int totalSlots = getCsvField(line, 3).toInt();
+
+    if (durationMs == 0) {
+      durationMs = 4000;
+    }
+
+    if (occupiedSlots <= 0) {
+      occupiedSlots = lastTotalSlots;
+    }
+
+    if (totalSlots <= 0) {
+      totalSlots = lastTotalSlots;
+    }
+
+    showTemporaryMessage(
+      "Parking Full",
+      "Cannot Enter",
+      "Please Wait",
+      "Cars: " + String(occupiedSlots) + "/" + String(totalSlots),
+      durationMs
+    );
   }
 }
 
 /**
- * Serial로 들어온 LCD 표시 명령을 모두 읽는다.
+ * 시리얼 버퍼에서 LCD 명령을 읽는다.
  * @returns {void} 반환값 없음
  */
 void readDisplayCommands() {
@@ -104,11 +204,15 @@ void readDisplayCommands() {
 }
 
 /**
- * 임시 안내 문구 표시 시간이 끝나면 기본 주차 현황 화면으로 복귀한다.
+ * 임시 메시지 시간이 끝나면 기본 상태로 되돌린다.
  * @returns {void} 반환값 없음
  */
 void updateDefaultDisplay() {
-  if (temporaryMessageUntil == 0 || millis() < temporaryMessageUntil) {
+  if (temporaryMessageUntil == 0) {
+    return;
+  }
+
+  if (millis() < temporaryMessageUntil) {
     return;
   }
 
@@ -116,29 +220,61 @@ void updateDefaultDisplay() {
   showDefaultStatus();
 }
 
+void printAlive() {
+  if (millis() - lastAliveAt < SERIAL_ALIVE_INTERVAL_MS) {
+    return;
+  }
+
+  lastAliveAt = millis();
+  Serial.print("UNO3 LCD ALIVE 0x");
+  if (lcdReady) {
+    Serial.println(activeExitLcdAddress, HEX);
+    return;
+  }
+
+  Serial.println("NONE");
+}
+
+void refreshStatusDisplayIfNeeded() {
+  if (!lcdReady || temporaryMessageUntil != 0) {
+    return;
+  }
+
+  if (millis() - lastDisplayRefreshAt < DISPLAY_REFRESH_INTERVAL_MS) {
+    return;
+  }
+
+  lastDisplayRefreshAt = millis();
+  showDefaultStatus();
+}
+
 /**
- * LCD 전광판 보드를 초기화한다.
+ * 출구 LCD만 초기화한다.
  * @returns {void} 반환값 없음
  */
 void setup() {
   Serial.begin(9600);
+  Wire.begin();
 
-  entranceLcd.init();
-  entranceLcd.backlight();
-  exitLcd.init();
-  exitLcd.backlight();
+  Serial.println("UNO3 LCD START");
+  Serial.println("SDA=A4 SCL=A5");
+  selectExitLcd();
 
-  showParkingStatus(entranceLcd, exitLcd, 0, PARKING_TOTAL_SLOTS);
-  Serial.println("=== Uno 3 LCD Display Start ===");
-  Serial.println("Entrance LCD: 0x27, Exit LCD: 0x3F");
+  if (lcdReady) {
+    exitLcd->init();
+    exitLcd->backlight();
+    showDefaultStatus();
+  }
 }
 
 /**
- * Node.js 서버의 LCD 표시 명령을 반복 처리한다.
+ * 서버가 보낸 명령을 계속 반영한다.
  * @returns {void} 반환값 없음
  */
 void loop() {
+  printAlive();
   readDisplayCommands();
+  refreshStatusDisplayIfNeeded();
   updateDefaultDisplay();
   delay(50);
 }

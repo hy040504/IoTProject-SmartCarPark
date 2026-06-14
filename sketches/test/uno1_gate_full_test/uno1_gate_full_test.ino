@@ -1,22 +1,25 @@
 #include <LiquidCrystal_I2C.h>
 #include <Servo.h>
 
-const int ENTRANCE_LIGHT_PIN = A0;      // 입구 조도센서 핀
-const int EXIT_LIGHT_PIN = A1;          // 출구 조도센서 핀
-const int ENTRANCE_SERVO_PIN = 9;       // 입구 차단기 서보 핀
-const int EXIT_SERVO_PIN = 8;           // 출구 차단기 서보 핀
+const int ENTRANCE_LIGHT_PIN = A0;
+const int EXIT_LIGHT_PIN = A1;
+const int ENTRANCE_SERVO_PIN = 9;
+const int EXIT_SERVO_PIN = 8;
 
-const int LIGHT_BLOCKED_THRESHOLD = 200;      // 차량 그림자로 판단할 조도 기준
-const int SERVO_STOP_ANGLE = 90;              // 연속회전 서보 정지 신호
-const int SERVO_OPEN_ROTATE_ANGLE = 180;      // 차단기 열림 방향 회전 신호
-const int SERVO_CLOSE_ROTATE_ANGLE = 0;       // 차단기 닫힘 방향 회전 신호
-const unsigned long SERVO_ROTATE_TIME_MS = 550; // 차단기 1회 이동 시간
-const unsigned long GATE_OPEN_TIME_MS = 3000;   // 차단기 열림 유지 시간
-const unsigned long LIGHT_LOG_INTERVAL_MS = 500; // 조도센서 로그 출력 주기
+const int LIGHT_BLOCKED_THRESHOLD = 200;
+const int SERVO_STOP_ANGLE = 90;
+const int ENTRANCE_SERVO_OPEN_ROTATE_ANGLE = 180;
+const int ENTRANCE_SERVO_CLOSE_ROTATE_ANGLE = 0;
+const int EXIT_SERVO_OPEN_ROTATE_ANGLE = 0;
+const int EXIT_SERVO_CLOSE_ROTATE_ANGLE = 180;
+const unsigned long ENTRANCE_SERVO_ROTATE_TIME_MS = 100;
+const unsigned long EXIT_SERVO_ROTATE_TIME_MS = 200;
+const unsigned long GATE_OPEN_TIME_MS = 3000;
+const unsigned long LIGHT_LOG_INTERVAL_MS = 500;
 
-LiquidCrystal_I2C lcd(0x27, 16, 2); // Uno 1 장치 상태 확인용 LCD
-Servo entranceServo;                // 입구 차단기 테스트 서보 객체
-Servo exitServo;                    // 출구 차단기 테스트 서보 객체
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+Servo entranceServo;
+Servo exitServo;
 
 enum BarrierPhase {
   BARRIER_STOPPED,
@@ -30,17 +33,20 @@ struct BarrierState {
   const char* name;
   BarrierPhase phase;
   unsigned long changedAt;
+  bool clockwise;
+  unsigned long rotateTimeMs;
 };
 
-BarrierState entranceBarrier = {&entranceServo, "Entrance", BARRIER_STOPPED, 0}; // 입구 차단기 테스트 상태
-BarrierState exitBarrier = {&exitServo, "Exit", BARRIER_STOPPED, 0};             // 출구 차단기 테스트 상태
+BarrierState entranceBarrier = {&entranceServo, "Entrance", BARRIER_STOPPED, 0, false, ENTRANCE_SERVO_ROTATE_TIME_MS};
+BarrierState exitBarrier = {&exitServo, "Exit", BARRIER_STOPPED, 0, true, EXIT_SERVO_ROTATE_TIME_MS};
 
-bool previousEntranceDetected = false; // 입구 센서 중복 감지 방지 상태
-bool previousExitDetected = false;     // 출구 센서 중복 감지 방지 상태
-unsigned long lastLightLoggedAt = 0;   // 마지막 조도 로그 출력 시각
+bool previousEntranceDetected = false;
+bool previousExitDetected = false;
+unsigned long lastLightLoggedAt = 0;
+bool startupServoTestDone = false;
 
 /**
- * LCD 두 줄에 테스트 상태를 출력한다.
+ * LCD에 두 줄 메시지를 표시한다.
  * @param {String} firstLine - 첫 번째 줄 메시지
  * @param {String} secondLine - 두 번째 줄 메시지
  * @returns {void} 반환값 없음
@@ -54,8 +60,8 @@ void showMessage(String firstLine, String secondLine) {
 }
 
 /**
- * 연속회전 서보를 정지 신호로 고정한다.
- * @param {Servo&} targetServo - 제어할 서보 객체
+ * 서보를 정지 상태로 맞춘다.
+ * @param {Servo&} targetServo - 제어할 서보
  * @returns {void} 반환값 없음
  */
 void stopServo(Servo& targetServo) {
@@ -63,42 +69,40 @@ void stopServo(Servo& targetServo) {
 }
 
 /**
- * 차단기 열림 방향 회전을 시작한다.
+ * 차단기를 여는 방향으로 회전시킨다.
  * @param {BarrierState&} barrier - 제어할 차단기 상태
  * @returns {void} 반환값 없음
  */
 void startOpeningGate(BarrierState& barrier) {
-  barrier.servo->write(SERVO_OPEN_ROTATE_ANGLE);
+  barrier.servo->write(barrier.clockwise ? EXIT_SERVO_OPEN_ROTATE_ANGLE : ENTRANCE_SERVO_OPEN_ROTATE_ANGLE);
   barrier.phase = BARRIER_OPENING;
   barrier.changedAt = millis();
-
   Serial.print(barrier.name);
   Serial.println(" gate opening");
 }
 
 /**
- * 차단기 닫힘 방향 회전을 시작한다.
+ * 차단기를 닫는 방향으로 회전시킨다.
  * @param {BarrierState&} barrier - 제어할 차단기 상태
  * @returns {void} 반환값 없음
  */
 void startClosingGate(BarrierState& barrier) {
-  barrier.servo->write(SERVO_CLOSE_ROTATE_ANGLE);
+  barrier.servo->write(barrier.clockwise ? EXIT_SERVO_CLOSE_ROTATE_ANGLE : ENTRANCE_SERVO_CLOSE_ROTATE_ANGLE);
   barrier.phase = BARRIER_CLOSING;
   barrier.changedAt = millis();
-
   Serial.print(barrier.name);
   Serial.println(" gate closing");
 }
 
 /**
- * 연속회전 서보가 설정 시간 이후 멈추도록 차단기 상태를 갱신한다.
+ * 서보가 지정 시간 동안만 동작하도록 차단기 상태를 갱신한다.
  * @param {BarrierState&} barrier - 갱신할 차단기 상태
  * @returns {void} 반환값 없음
  */
 void updateGate(BarrierState& barrier) {
   unsigned long elapsed = millis() - barrier.changedAt;
 
-  if (barrier.phase == BARRIER_OPENING && elapsed >= SERVO_ROTATE_TIME_MS) {
+  if (barrier.phase == BARRIER_OPENING && elapsed >= barrier.rotateTimeMs) {
     stopServo(*barrier.servo);
     barrier.phase = BARRIER_OPEN;
     barrier.changedAt = millis();
@@ -110,7 +114,7 @@ void updateGate(BarrierState& barrier) {
     return;
   }
 
-  if (barrier.phase == BARRIER_CLOSING && elapsed >= SERVO_ROTATE_TIME_MS) {
+  if (barrier.phase == BARRIER_CLOSING && elapsed >= barrier.rotateTimeMs) {
     stopServo(*barrier.servo);
     barrier.phase = BARRIER_STOPPED;
     Serial.print(barrier.name);
@@ -119,18 +123,18 @@ void updateGate(BarrierState& barrier) {
 }
 
 /**
- * 조도센서 값으로 차량 감지 여부를 판단한다.
- * @param {int} lightValue - 확인할 조도센서 값
- * @returns {bool} 차량이 감지되면 true, 아니면 false
+ * 조도값으로 차량 감지 여부를 판단한다.
+ * @param {int} lightValue - 조도센서 값
+ * @returns {bool} 차량으로 판단되면 true
  */
 bool isVehicleDetectedByLight(int lightValue) {
   return lightValue <= LIGHT_BLOCKED_THRESHOLD;
 }
 
 /**
- * 입구와 출구 조도센서 값을 0.5초마다 출력한다.
- * @param {int} entranceLightValue - 입구 조도센서 값
- * @param {int} exitLightValue - 출구 조도센서 값
+ * 조도값을 0.5초 간격으로 출력한다.
+ * @param {int} entranceLightValue - 입구 조도값
+ * @param {int} exitLightValue - 출구 조도값
  * @returns {void} 반환값 없음
  */
 void logLightValues(int entranceLightValue, int exitLightValue) {
@@ -146,12 +150,54 @@ void logLightValues(int entranceLightValue, int exitLightValue) {
 }
 
 /**
- * 입구 조도센서 감지 시 입구 차단기와 LCD를 테스트한다.
- * @param {int} entranceLightValue - 입구 조도센서 값
+ * 입구 차단기의 초기 시험 동작을 수행한다.
+ * @param {BarrierState&} barrier - 시험할 차단기 상태
+ * @returns {void} 반환값 없음
+ */
+void runBarrierStartupTest(BarrierState& barrier) {
+  startOpeningGate(barrier);
+  delay(barrier.rotateTimeMs);
+  stopServo(*barrier.servo);
+  delay(300);
+
+  startClosingGate(barrier);
+  delay(barrier.rotateTimeMs);
+  stopServo(*barrier.servo);
+  barrier.phase = BARRIER_STOPPED;
+  barrier.changedAt = millis();
+  delay(300);
+}
+
+/**
+ * 부팅 직후 양쪽 차단기를 한 번씩 시험 동작시킨다.
+ * @returns {void} 반환값 없음
+ */
+void runStartupServoTest() {
+  if (startupServoTestDone) {
+    return;
+  }
+
+  startupServoTestDone = true;
+  Serial.println("=== Startup Servo Test Start ===");
+  runBarrierStartupTest(entranceBarrier);
+  runBarrierStartupTest(exitBarrier);
+  Serial.println("=== Startup Servo Test End ===");
+}
+
+/**
+ * 차량 유입을 감지해 입구 차단기를 제어한다.
+ * @param {int} entranceLightValue - 입구 조도값
  * @returns {void} 반환값 없음
  */
 void handleEntranceTest(int entranceLightValue) {
   bool entranceDetected = isVehicleDetectedByLight(entranceLightValue);
+
+  Serial.print("[entrance] light=");
+  Serial.print(entranceLightValue);
+  Serial.print(", detected=");
+  Serial.print(entranceDetected ? "1" : "0");
+  Serial.print(", prev=");
+  Serial.println(previousEntranceDetected ? "1" : "0");
 
   if (entranceDetected && !previousEntranceDetected) {
     Serial.print("ENTRANCE_DETECTED, Entrance Light: ");
@@ -167,8 +213,8 @@ void handleEntranceTest(int entranceLightValue) {
 }
 
 /**
- * 출구 조도센서 감지 시 출구 차단기와 Serial 이벤트를 테스트한다.
- * @param {int} exitLightValue - 출구 조도센서 값
+ * 차량 유출을 감지해 출구 차단기를 제어한다.
+ * @param {int} exitLightValue - 출구 조도값
  * @returns {void} 반환값 없음
  */
 void handleExitTest(int exitLightValue) {
@@ -189,7 +235,7 @@ void handleExitTest(int exitLightValue) {
 }
 
 /**
- * Uno 1에 연결된 LCD, 조도센서, 서보모터 테스트 환경을 초기화한다.
+ * 테스트용 보드 초기화를 수행한다.
  * @returns {void} 반환값 없음
  */
 void setup() {
@@ -202,6 +248,9 @@ void setup() {
   stopServo(entranceServo);
   stopServo(exitServo);
 
+  delay(300);
+  runStartupServoTest();
+
   Serial.println("=== Uno 1 Gate Full Test Start ===");
   Serial.println("A0: Entrance light, A1: Exit light");
   Serial.println("D9: Entrance servo, D8: Exit servo");
@@ -213,7 +262,7 @@ void setup() {
 }
 
 /**
- * Uno 1 장치들이 단독으로 동작하는지 반복 확인한다.
+ * 테스트용 센서와 차단기 상태를 반복 갱신한다.
  * @returns {void} 반환값 없음
  */
 void loop() {

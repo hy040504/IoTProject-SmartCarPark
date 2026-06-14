@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1650" height="980" viewBox="0 0 1650 980">
+<svg xmlns="http://www.w3.org/2000/svg" width="1650" height="950" viewBox="0 0 1650 950">
   <style>
     .title { font: 700 34px Arial, sans-serif; fill: #172033; }
     .subtitle { font: 18px Arial, sans-serif; fill: #526070; }
-    .label { font: 16px Arial, sans-serif; fill: #172033; }
-    .small { font: 13px Arial, sans-serif; fill: #526070; }
+    .label { font: 700 22px Arial, sans-serif; fill: #172033; }
+    .small { font: 16px Arial, sans-serif; fill: #344054; }
     .box { fill: #f7f9fc; stroke: #172033; stroke-width: 2; rx: 12; }
     .module { fill: #ffffff; stroke: #1f2a44; stroke-width: 2; rx: 10; }
     .note { fill: #fff8dc; stroke: #b58900; stroke-width: 1.5; rx: 8; }
@@ -11,69 +11,55 @@
     .wireApi { stroke: #0f9d58; stroke-width: 4; fill: none; stroke-dasharray: 12 10; }
   </style>
 
-  <rect width="1650" height="980" fill="#eef3f8"/>
-  <text x="60" y="58" class="title">Node.js Serial Bridge 회로도 - Uno 3대 USB Serial 구조</text>
-  <text x="60" y="88" class="subtitle">실행 폴더: 요금 (NodeJs Server)/fee-server</text>
+  <rect width="1650" height="950" fill="#eef3f8"/>
+  <text x="60" y="58" class="title">Node.js Serial Bridge</text>
+  <text x="60" y="88" class="subtitle">Uno 1, Uno 2, Uno 3 are connected over USB Serial.</text>
 
-  <rect x="610" y="150" width="430" height="590" class="box"/>
-  <rect x="675" y="225" width="300" height="315" fill="#263238" stroke="#111827" stroke-width="3" rx="14"/>
-  <text x="720" y="280" font-family="Arial" font-size="30" font-weight="700" fill="#fff">PC / Node.js</text>
-  <text x="720" y="320" class="label" fill="#dff8ee">Express + serialport</text>
-  <text x="710" y="375" font-family="Arial" font-size="16" fill="#dff8ee">GATE_SERIAL_PORT=COM3</text>
-  <text x="710" y="405" font-family="Arial" font-size="16" fill="#dff8ee">SLOT_SERIAL_PORT=COM5</text>
-  <text x="710" y="435" font-family="Arial" font-size="16" fill="#dff8ee">LCD_SERIAL_PORT=COM7</text>
-  <text x="710" y="465" font-family="Arial" font-size="16" fill="#dff8ee">SERIAL_BAUD_RATE=9600</text>
+  <rect x="600" y="150" width="450" height="560" class="box"/>
+  <rect x="665" y="220" width="320" height="340" fill="#263238" stroke="#111827" stroke-width="3" rx="14"/>
+  <text x="710" y="275" font-family="Arial" font-size="30" font-weight="700" fill="#fff">PC / Node.js</text>
+  <text x="710" y="315" class="small" fill="#dff8ee">Express + serialport</text>
+  <text x="700" y="370" class="small" fill="#dff8ee">GATE_SERIAL_PORT=COM3</text>
+  <text x="700" y="400" class="small" fill="#dff8ee">SLOT_SERIAL_PORT=COM5</text>
+  <text x="700" y="430" class="small" fill="#dff8ee">LCD_SERIAL_PORT=COM7</text>
+  <text x="700" y="460" class="small" fill="#dff8ee">SERIAL_BAUD_RATE=9600</text>
 
-  <rect x="95" y="175" width="430" height="220" class="module"/>
-  <text x="125" y="215" class="label">Arduino Uno 1</text>
-  <text x="125" y="247" class="small">sketches/uno_gate/uno_gate.ino</text>
-  <text x="125" y="280" class="small">입구/출구 조도센서, 입구/출구 차단기</text>
-  <text x="125" y="315" class="small">수신: EMPTY,n</text>
-  <text x="125" y="345" class="small">송신: ENTRANCE_ALLOWED, ENTRANCE_FULL, BARRIER_EXIT</text>
-  <path d="M525 285 L610 345" class="wireUsb"/>
-  <text x="535" y="270" class="small">USB Serial</text>
+  <rect x="95" y="160" width="430" height="210" class="module"/>
+  <text x="125" y="205" class="label">Arduino Uno 1</text>
+  <text x="125" y="240" class="small">sketches/uno_gate/uno_gate.ino</text>
+  <text x="125" y="275" class="small">Entrance/exit light sensors + barrier control</text>
+  <text x="125" y="310" class="small">Sends EMPTY and BARRIER_EXIT</text>
+  <path d="M525 270 L600 320" class="wireUsb"/>
 
-  <rect x="1125" y="175" width="430" height="220" class="module"/>
-  <text x="1155" y="215" class="label">Arduino Uno 2</text>
-  <text x="1155" y="247" class="small">sketches/uno_slots/uno_slots.ino</text>
-  <text x="1155" y="280" class="small">주차칸 초음파센서, 칸별 LED</text>
-  <text x="1155" y="315" class="small">송신: ENTRY,slot / VACATED,slot</text>
-  <text x="1155" y="345" class="small">수신 없음</text>
-  <path d="M1040 345 L1125 285" class="wireUsb"/>
-  <text x="1050" y="270" class="small">USB Serial</text>
+  <rect x="1125" y="160" width="430" height="210" class="module"/>
+  <text x="1155" y="205" class="label">Arduino Uno 2</text>
+  <text x="1155" y="240" class="small">sketches/uno_slots/uno_slots.ino</text>
+  <text x="1155" y="275" class="small">Two slot ultrasonic sensors + LEDs</text>
+  <text x="1155" y="310" class="small">Sends ENTRY and VACATED</text>
+  <path d="M1050 320 L1125 270" class="wireUsb"/>
 
-  <rect x="610" y="775" width="430" height="150" class="module"/>
-  <text x="640" y="815" class="label">Arduino Uno 3</text>
-  <text x="640" y="847" class="small">sketches/uno_lcd/uno_lcd.ino</text>
-  <text x="640" y="880" class="small">입구 LCD + 출구 LCD 전광판</text>
-  <text x="640" y="910" class="small">수신: LCD_STATUS, LCD_ENTRANCE_*, LCD_EXIT_FEE</text>
-  <path d="M825 540 L825 775" class="wireUsb"/>
-  <text x="840" y="680" class="small">USB Serial</text>
+  <rect x="600" y="760" width="450" height="150" class="module"/>
+  <text x="630" y="805" class="label">Arduino Uno 3</text>
+  <text x="630" y="840" class="small">sketches/uno_lcd/uno_lcd.ino</text>
+  <text x="630" y="875" class="small">Exit LCD only, receives LCD_STATUS and LCD_EXIT_FEE</text>
+  <path d="M825 560 L825 760" class="wireUsb"/>
 
-  <rect x="610" y="585" width="430" height="150" class="note"/>
-  <text x="640" y="620" class="label">서버 내부 상태</text>
-  <text x="640" y="650" class="small">slotOccupied: 1번/2번 점유 여부</text>
-  <text x="640" y="680" class="small">parkingSessions: 슬롯별 입차 시간</text>
-  <text x="640" y="710" class="small">pendingExitSlots: 출차 대기 슬롯</text>
+  <rect x="95" y="460" width="430" height="200" class="note"/>
+  <text x="125" y="500" class="label">Server role</text>
+  <text x="125" y="535" class="small">Stores slot state and counts empty spaces.</text>
+  <text x="125" y="565" class="small">Matches exit events with pending vacated slots.</text>
+  <text x="125" y="595" class="small">Sends exit fee to Uno 3 LCD.</text>
+  <path d="M525 560 C610 560, 640 580, 600 610" class="wireApi"/>
 
-  <rect x="95" y="500" width="430" height="235" class="note"/>
-  <text x="125" y="535" class="label">실행 순서</text>
-  <text x="125" y="567" class="small">1. Node.js 서버 종료</text>
-  <text x="125" y="597" class="small">2. Uno 1/Uno 2/Uno 3 각각 업로드</text>
-  <text x="125" y="627" class="small">3. 세 Uno를 USB로 PC에 연결</text>
-  <text x="125" y="657" class="small">4. COM 포트 확인 후 npm start</text>
-  <text x="125" y="687" class="small">5. 서버 콘솔과 LCD 표시 확인</text>
+  <rect x="1125" y="460" width="430" height="200" class="note"/>
+  <text x="1155" y="500" class="label">LCD commands</text>
+  <text x="1155" y="535" class="small">LCD_STATUS: current occupied / total</text>
+  <text x="1155" y="565" class="small">LCD_EXIT_FEE: slot number and fee</text>
+  <text x="1155" y="595" class="small">Only exit LCD commands are used now.</text>
 
-  <rect x="1125" y="500" width="430" height="235" class="note"/>
-  <text x="1155" y="535" class="label">표시 흐름</text>
-  <text x="1155" y="567" class="small">LCD_STATUS: 양쪽 LCD 기본 주차 현황</text>
-  <text x="1155" y="597" class="small">LCD_ENTRANCE_WELCOME: 입차 가능 안내</text>
-  <text x="1155" y="627" class="small">LCD_ENTRANCE_FULL: 만차 안내</text>
-  <text x="1155" y="657" class="small">LCD_EXIT_FEE: 출차 칸과 요금 표시</text>
-
-  <rect x="95" y="805" width="430" height="100" class="module"/>
-  <text x="125" y="840" class="label">HTTP API</text>
-  <text x="125" y="870" class="small">http://localhost:3000/parking/sessions</text>
-  <text x="125" y="895" class="small">http://localhost:3000/serial/status</text>
-  <path d="M675 540 C610 585, 560 655, 525 805" class="wireApi"/>
+  <rect x="95" y="715" width="430" height="135" class="note"/>
+  <text x="125" y="755" class="label">Run order</text>
+  <text x="125" y="790" class="small">1. Upload Uno sketches</text>
+  <text x="125" y="820" class="small">2. Check USB ports</text>
+  <text x="125" y="850" class="small">3. Start Node.js server</text>
 </svg>

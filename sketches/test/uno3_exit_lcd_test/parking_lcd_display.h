@@ -52,11 +52,6 @@ inline void showLcdMessage(
   lcd.print(fitLcdLine(fourthLine));
 }
 
-/**
- * 주차 시간을 LCD용 짧은 문자열로 만든다.
- * @param {unsigned long} parkedSeconds - 주차한 초
- * @returns {String} 주차 시간 표시 문자열
- */
 inline String formatParkedDuration(unsigned long parkedSeconds) {
   unsigned long hours = parkedSeconds / 3600;
   unsigned long minutes = (parkedSeconds % 3600) / 60;
@@ -83,12 +78,10 @@ inline void showParkingStatus(LiquidCrystal_I2C& lcd, int occupiedSlots, int tot
 }
 
 /**
- * 출차 요금과 주차 시간을 출구 LCD에 표시한다.
+ * 출차 요금을 출구 LCD에 표시한다.
  * @param {LiquidCrystal_I2C&} lcd - 대상 LCD
  * @param {int} slotId - 주차칸 번호
  * @param {long} fee - 계산된 요금
- * @param {String} exitTime - 출차 시각
- * @param {unsigned long} parkedSeconds - 주차한 초
  * @returns {void} 반환값 없음
  */
 inline void showExitFee(

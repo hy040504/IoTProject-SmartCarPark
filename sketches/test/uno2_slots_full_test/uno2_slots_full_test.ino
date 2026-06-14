@@ -3,7 +3,7 @@ const unsigned long ECHO_TIMEOUT_US = 30000; // 초음파 응답 대기 최대 �
 const unsigned long SERIAL_LOG_INTERVAL_MS = 500; // 주차칸 상태 로그 출력 주기
 const unsigned long LED_TEST_TIME_MS = 500;  // LED 배선 확인 점등 시간
 
-const int SLOT_OCCUPIED_DISTANCE_CM[SLOT_COUNT] = {8, 5}; // 주차칸별 차량 감지 거리
+const int SLOT_OCCUPIED_DISTANCE_CM[SLOT_COUNT] = {16, 10}; // 주차칸별 차량 감지 거리
 const int SLOT_TRIG_PINS[SLOT_COUNT] = {4, 13};      // 주차칸별 초음파 송신 핀
 const int SLOT_ECHO_PINS[SLOT_COUNT] = {5, 12};      // 주차칸별 초음파 수신 핀
 const int SLOT_RED_LED_PINS[SLOT_COUNT] = {8, 10};   // 주차칸별 점유 표시 LED 핀
@@ -177,8 +177,8 @@ void setup() {
   delay(1000);
 
   Serial.println("=== Uno 2 Slots Full Test Start ===");
-  Serial.println("Slot 1: TRIG D4, ECHO D5, RED D8, GREEN D9, threshold 8 cm");
-  Serial.println("Slot 2: TRIG D13, ECHO D12, RED D10, GREEN D11, threshold 5 cm");
+  Serial.println("Slot 1: TRIG D4, ECHO D5, RED D8, GREEN D9, threshold 16 cm");
+  Serial.println("Slot 2: TRIG D13, ECHO D12, RED D10, GREEN D11, threshold 10 cm");
 
   for (int index = 0; index < SLOT_COUNT; index++) {
     pinMode(SLOT_TRIG_PINS[index], OUTPUT);
