@@ -7,6 +7,7 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 const gateSerialPath = process.env.GATE_SERIAL_PORT || 'COM3';
 const slotSerialPath = process.env.SLOT_SERIAL_PORT || 'COM5';
+const lcdSerialPath = process.env.LCD_SERIAL_PORT || 'COM7';
 const serialBaudRate = Number(process.env.SERIAL_BAUD_RATE || 9600);
 const slotCount = 2;
 
@@ -151,6 +152,7 @@ function createSerialConnection(path, onLine) {
 
 let gateConnection = null;
 let slotConnection = null;
+let lcdConnection = null;
 
 /**
  * Uno 1 차단기 보드에 한 줄 명령을 보낸다.
@@ -167,11 +169,50 @@ function sendGateLine(line) {
 }
 
 /**
+ * Uno 3 LCD 전광판 보드에 한 줄 명령을 보낸다.
+ * @param {string} line - 전송할 LCD 표시 명령 문자열
+ * @returns {boolean} 전송 성공 여부
+ */
+function sendLcdLine(line) {
+  if (!lcdConnection || !lcdConnection.port.isOpen) {
+    return false;
+  }
+
+  lcdConnection.port.write(`${line}\n`);
+  return true;
+}
+
+/**
  * Uno 1에 최신 빈자리 수를 전달한다.
  * @returns {void} 반환값 없음
  */
 function notifyEmptySlots() {
   sendGateLine(`EMPTY,${countEmptySlots()}`);
+}
+
+/**
+ * Uno 3 LCD 전광판에 현재 주차 현황을 전달한다.
+ * @returns {void} 반환값 없음
+ */
+function notifyDisplayStatus() {
+  const occupiedSlots = slotCount - countEmptySlots();
+  sendLcdLine(`LCD_STATUS,${occupiedSlots},${slotCount}`);
+}
+
+/**
+ * 입구 LCD에 입차 가능 안내를 요청한다.
+ * @returns {void} 반환값 없음
+ */
+function notifyEntranceWelcome() {
+  sendLcdLine(`LCD_ENTRANCE_WELCOME,${countEmptySlots()}`);
+}
+
+/**
+ * 입구 LCD에 만차 안내를 요청한다.
+ * @returns {void} 반환값 없음
+ */
+function notifyEntranceFull() {
+  sendLcdLine('LCD_ENTRANCE_FULL');
 }
 
 /**
@@ -210,6 +251,7 @@ function handleSlotLine(line) {
   if (eventName === 'ENTRY') {
     registerVehicleEntry(slotId);
     notifyEmptySlots();
+    notifyDisplayStatus();
     console.log(`[slot] entry slot ${slotId}`);
     return;
   }
@@ -217,6 +259,7 @@ function handleSlotLine(line) {
   if (eventName === 'VACATED') {
     markVehicleVacated(slotId);
     notifyEmptySlots();
+    notifyDisplayStatus();
     console.log(`[slot] vacated slot ${slotId}`);
   }
 }
@@ -238,8 +281,9 @@ function finalizePendingExit() {
     return null;
   }
 
-  sendGateLine(`FEE,${receipt.slotId},${receipt.fee}`);
   notifyEmptySlots();
+  notifyDisplayStatus();
+  sendLcdLine(`LCD_EXIT_FEE,${receipt.slotId},${receipt.fee}`);
 
   return {
     slotId: receipt.slotId,
@@ -253,6 +297,16 @@ function finalizePendingExit() {
  * @returns {void} 반환값 없음
  */
 function handleGateLine(line) {
+  if (line === 'ENTRANCE_ALLOWED') {
+    notifyEntranceWelcome();
+    return;
+  }
+
+  if (line === 'ENTRANCE_FULL') {
+    notifyEntranceFull();
+    return;
+  }
+
   if (line !== 'BARRIER_EXIT') {
     return;
   }
@@ -264,7 +318,7 @@ function handleGateLine(line) {
     return;
   }
 
-  sendGateLine('FEE,0,0');
+  sendLcdLine('LCD_EXIT_FEE,0,0');
   console.log('[gate] exit detected without pending slot');
 }
 
@@ -279,6 +333,7 @@ function handleVehicleEntry(req, res) {
   const entry = registerVehicleEntry(slotId);
 
   notifyEmptySlots();
+  notifyDisplayStatus();
 
   res.json({
     ok: true,
@@ -306,6 +361,7 @@ function handleVehicleExit(req, res) {
   }
 
   notifyEmptySlots();
+  notifyDisplayStatus();
 
   res.json({
     ok: true,
@@ -346,6 +402,10 @@ function handleSerialStatus(req, res) {
       path: slotSerialPath,
       open: Boolean(slotConnection && slotConnection.port.isOpen),
     },
+    lcd: {
+      path: lcdSerialPath,
+      open: Boolean(lcdConnection && lcdConnection.port.isOpen),
+    },
     baudRate: serialBaudRate,
   });
 }
@@ -358,10 +418,20 @@ function handleServerStarted() {
   console.log(`Parking fee server listening on http://localhost:${port}`);
   console.log(`Gate serial: ${gateSerialPath}`);
   console.log(`Slot serial: ${slotSerialPath}`);
+  console.log(`LCD serial: ${lcdSerialPath}`);
 }
 
 gateConnection = createSerialConnection(gateSerialPath, handleGateLine);
 slotConnection = createSerialConnection(slotSerialPath, handleSlotLine);
+lcdConnection = createSerialConnection(lcdSerialPath, () => {});
+
+gateConnection.port.on('open', notifyEmptySlots);
+lcdConnection.port.on('open', notifyDisplayStatus);
+
+setTimeout(() => {
+  notifyEmptySlots();
+  notifyDisplayStatus();
+}, 1500);
 
 app.get('/parking/entry', handleVehicleEntry);
 app.get('/parking/exit', handleVehicleExit);

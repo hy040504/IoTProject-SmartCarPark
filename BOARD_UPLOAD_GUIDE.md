@@ -4,24 +4,24 @@
 
 | 보드 | 업로드할 파일 | 역할 |
 | --- | --- | --- |
-| Arduino Uno 1 | `sketches/uno_gate/uno_gate.ino` | 입구/출구 감지, LCD, 입구/출구 차단기 |
+| Arduino Uno 1 | `sketches/uno_gate/uno_gate.ino` | 입구/출구 감지, 입구/출구 차단기 |
 | Arduino Uno 2 | `sketches/uno_slots/uno_slots.ino` | 주차칸 2개 감지, 칸별 LED |
-| PC Node.js | `요금 (NodeJs Server)/fee-server` | Uno 2개 USB Serial 중계, 요금 계산 |
+| Arduino Uno 3 | `sketches/uno_lcd/uno_lcd.ino` | 입구 LCD, 출구 LCD 전광판 |
+| PC Node.js | `요금 (NodeJs Server)/fee-server` | Uno 3개 USB Serial 중계, 요금 계산, LCD 표시 명령 전송 |
 
 Arduino IDE에서 각 스케치 폴더를 열어 해당 보드에 각각 업로드하면 됩니다.
 
-현재 메인 구조는 Arduino Uno 2대와 PC Node.js 서버만 사용합니다. `sketches` 폴더에는 실제 업로드할 Uno 스케치와 테스트 스케치만 남겼습니다.
+현재 메인 구조는 Arduino Uno 3대와 PC Node.js 서버를 사용합니다.
 
 ## 테스트용 스케치
 
 | 보드 | 업로드할 파일 | 테스트 대상 |
 | --- | --- | --- |
-| Arduino Uno 1 | `sketches/test/uno_gate_test/uno_gate_test.ino` | 입구 조도센서, 출구 조도센서, LCD, 입구 서보, 출구 서보 |
-| Arduino Uno 1 | `sketches/test/uno_gate_no_lcd_test/uno_gate_no_lcd_test.ino` | LCD 제외, 조도센서와 서보만 테스트 |
-| Arduino Uno 1 | `sketches/test/uno_d8_servo_test/uno_d8_servo_test.ino` | D8 출구 서보 단독 테스트 |
-| Arduino Uno 1 | `sketches/test/uno_i2c_scanner/uno_i2c_scanner.ino` | LCD I2C 주소와 배선 확인 |
-| Arduino Uno 2 | `sketches/test/uno_slots_test/uno_slots_test.ino` | 초음파센서 2개와 칸별 LED 4개 테스트 |
+| Arduino Uno 1 | `sketches/test/uno1_gate_full_test/uno1_gate_full_test.ino` | 입구/출구 조도센서, 입구/출구 서보 통합 테스트 |
+| Arduino Uno 1 | `sketches/test/exit_servo_only_test/exit_servo_only_test.ino` | 출구 서보 단독 테스트 |
+| Arduino Uno 2 | `sketches/test/uno2_slots_full_test/uno2_slots_full_test.ino` | 주차칸 초음파센서 2개와 LED 4개 테스트 |
+| Arduino Uno 3 | `sketches/test/uno3_lcd_dual_test/uno3_lcd_dual_test.ino` | 입구/출구 LCD 2개 표시 테스트 |
 
-아직 주차칸 센서를 연결하지 않은 상태에서는 `uno_gate_test.ino`를 먼저 업로드해서 현재 부착한 부품만 확인하면 됩니다.
+아직 주차칸 센서를 연결하지 않은 상태에서는 `uno1_gate_full_test.ino`를 먼저 업로드해서 Uno 1에 부착한 부품만 확인하면 됩니다.
 
-부팅 메시지만 나오고 조도값 로그가 더 나오지 않으면 LCD 초기화에서 멈췄을 가능성이 큽니다. 이때는 먼저 `uno_gate_no_lcd_test.ino`로 조도센서와 서보를 확인하고, 그 다음 `uno_i2c_scanner.ino`로 LCD 주소가 `0x27`인지 `0x3F`인지 확인합니다.
+테스트 스케치는 조도값을 0.5초마다 출력하고, 출구 감지 순간에는 `BARRIER_EXIT, Exit Light: 값`과 `BARRIER_EXIT`를 함께 출력합니다.

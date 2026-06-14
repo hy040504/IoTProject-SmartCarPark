@@ -30,8 +30,6 @@
     <circle cx="610" cy="405" r="8" fill="#fff"/><text x="625" y="410" class="pin">GND</text>
     <circle cx="610" cy="450" r="8" fill="#fff"/><text x="625" y="455" class="pin">A0</text>
     <circle cx="610" cy="495" r="8" fill="#fff"/><text x="625" y="500" class="pin">A1</text>
-    <circle cx="610" cy="540" r="8" fill="#fff"/><text x="625" y="545" class="pin">A4 SDA</text>
-    <circle cx="610" cy="585" r="8" fill="#fff"/><text x="625" y="590" class="pin">A5 SCL</text>
   </g>
 
   <g>
@@ -75,15 +73,11 @@
   <path d="M186 650 L260 650 L610 495" class="wireSig"/>
   <text x="350" y="644" class="small">A1 신호</text>
 
-  <rect x="80" y="750" width="420" height="180" class="module"/>
-  <text x="110" y="785" class="label">I2C LCD 16x2</text>
-  <rect x="145" y="815" width="260" height="70" fill="#dff3ff" stroke="#006c9c" stroke-width="2" rx="6"/>
-  <text x="180" y="855" class="label">Entrance Open / Fee</text>
-  <text x="110" y="912" class="small">VCC→5V, GND→GND, SDA→A4, SCL→A5</text>
-  <path d="M500 205 L430 205 L430 820" class="wire5v"/>
-  <path d="M520 225 L450 225 L450 840" class="wireGnd"/>
-  <path d="M610 540 L500 540 L500 865 L405 865" class="wireI2c"/>
-  <path d="M610 585 L525 585 L525 890 L405 890" class="wireI2c thin"/>
+  <rect x="80" y="750" width="420" height="180" class="note"/>
+  <text x="110" y="785" class="label">LCD 분리</text>
+  <text x="110" y="820" class="small">입구/출구 LCD는 Uno 3에서 제어</text>
+  <text x="110" y="850" class="small">이 보드는 조도센서와 서보만 담당</text>
+  <text x="110" y="880" class="small">LCD 배선은 arduino_uno_3_lcd.svg 참고</text>
 
   <rect x="1090" y="300" width="410" height="180" class="module"/>
   <text x="1120" y="335" class="label">입구 차단기 서보</text>
@@ -116,6 +110,5 @@
   <line x1="620" y1="955" x2="680" y2="955" class="wire5v"/><text x="695" y="960" class="small">5V</text>
   <line x1="620" y1="980" x2="680" y2="980" class="wireGnd"/><text x="695" y="985" class="small">GND</text>
   <line x1="780" y1="955" x2="840" y2="955" class="wireSig"/><text x="855" y="960" class="small">센서/서보 신호</text>
-  <line x1="780" y1="980" x2="840" y2="980" class="wireI2c"/><text x="855" y="985" class="small">I2C</text>
   <line x1="620" y1="1005" x2="680" y2="1005" class="wireUsb"/><text x="695" y="1010" class="small">USB Serial</text>
 </svg>
