@@ -193,8 +193,6 @@ Arduino Uno 3: LCD 전광판
 led/
 ├── BOARD_UPLOAD_GUIDE.md
 ├── README.md
-├── handover.txt
-├── genspark_ppt_prompt.txt
 ├── libraries/
 │   └── LiquidCrystal_I2C/
 ├── docs/
@@ -436,13 +434,7 @@ Tailscale 관리자 페이지 URL:
 
 ```text
 start_fee_server.bat 실행 후
-tailscale_admin_url.txt 파일에 현재 접속 URL이 저장됨
-```
-
-Tailscale URL 파일:
-
-```text
-tailscale_admin_url.txt
+Tailscale 등록 기기에서 접속 가능한 관리자 페이지 URL이 자동으로 열림
 ```
 
 서버 실행 전 포트를 지정하려면 PowerShell에서 아래처럼 실행합니다.
@@ -468,7 +460,7 @@ start_fee_server.bat
 2. Uno 1/2/3 업로드
 3. Node.js 서버 실행
 4. Tailscale IP 확인
-5. 접속 URL을 `tailscale_admin_url.txt`에 저장하고 해당 주소로 브라우저 실행
+5. 접속 가능한 관리자 페이지 URL을 브라우저로 자동 실행
 
 ### 2. Arduino 업로드
 
@@ -522,17 +514,17 @@ start_fee_server.bat
 | --- | --- |
 | 완성된 주차장 모형 | ![완성된 주차장 모형](<시연 자료/사진/KakaoTalk_20260615_002815897_02.jpg>) |
 | 관리자 페이지 화면 1 | ![관리자 페이지 화면 1](<시연 자료/사진/스크린샷(53).png>) |
-| 관리자 페이지 화면 2 | ![관리자 페이지 화면 2](<시연 자료/사진/스크린샷(54).png>) |
-| 주차 상태/기록 화면 | ![주차 상태 기록 화면](<시연 자료/사진/스크린샷(55).png>) |
-| 관리자 페이지 추가 화면 | ![관리자 페이지 추가 화면](<시연 자료/사진/스크린샷(57).png>) |
-| 테마/대시보드 화면 | ![테마 대시보드 화면](<시연 자료/사진/스크린샷(58).png>) |
+| 관리자 페이지 화면 (어두운 테마) | ![테마 대시보드 화면](<시연 자료/사진/스크린샷(58).png>) |
+| 주차 상태/기록 화면 | ![관리자 페이지 화면 2](<시연 자료/사진/스크린샷(54).png>) |
+| 주차 상태/기록 화면 2 | ![주차 상태 기록 화면](<시연 자료/사진/스크린샷(55).png>) |
+| 주차 상태/기록 화면 (어두운 테마) | ![관리자 페이지 추가 화면](<시연 자료/사진/스크린샷(57).png>) |
 
 ### 제작 과정 사진
 
-- [KakaoTalk_20260615_002815897.jpg](<시연 자료/제작 과정 사진/KakaoTalk_20260615_002815897.jpg>)
-- [KakaoTalk_20260615_002815897_01.jpg](<시연 자료/제작 과정 사진/KakaoTalk_20260615_002815897_01.jpg>)
-- [KakaoTalk_20260615_002815897_03.jpg](<시연 자료/제작 과정 사진/KakaoTalk_20260615_002815897_03.jpg>)
-- [KakaoTalk_20260615_002815897_04.jpg](<시연 자료/제작 과정 사진/KakaoTalk_20260615_002815897_04.jpg>)
+- [전체 시연 영상](<https://youtu.be/KgurgbUI1z8>)
+- [LCD 모니터 영상](<https://youtu.be/0cOuXOLxFoA>)
+- [관리자 페이지 영상](<https://youtu.be/Z6LwPML_taE>)
+- [모형 시연 영상](<https://vimeo.com/1201190790?share=copy&fl=sv&fe=ci>)
 
 ---
 
@@ -573,7 +565,6 @@ start_fee_server.bat
 
 ## 🧾 문서
 
-- [handover.txt](handover.txt)
 - [BOARD_UPLOAD_GUIDE.md](BOARD_UPLOAD_GUIDE.md)
 
 ---
