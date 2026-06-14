@@ -381,6 +381,15 @@ http://localhost:3000
 http://localhost:3000/admin
 ```
 
+같은 Wi-Fi/LAN 내부 접속 예시:
+
+```text
+관리자 페이지: http://172.29.74.134:3000/admin
+서버 상태: http://172.29.74.134:3000/serial/status
+```
+
+> 위 IP는 현재 실행 PC의 내부망 주소 기준입니다. 네트워크가 바뀌면 함께 바뀔 수 있습니다.
+
 서버 실행 전 포트를 지정하려면 PowerShell에서 아래처럼 실행합니다.
 
 ```powershell
