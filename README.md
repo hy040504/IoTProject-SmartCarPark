@@ -14,7 +14,6 @@ Arduino Uno 2대와 Node.js Serial Bridge를 사용하는 스마트 주차장 �
 | Arduino Uno 1 | `sketches/uno_gate/uno_gate.ino` | 입구/출구 조도센서, 입구/출구 차단기, LCD |
 | Arduino Uno 2 | `sketches/uno_slots/uno_slots.ino` | 주차칸 2개 초음파센서, 칸별 빨간/초록 LED |
 | PC Node.js 서버 | `요금 (NodeJs Server)/fee-server/src/server.js` | Uno 2개 USB Serial 중계, 슬롯 상태 저장, 요금 계산 |
-| Wemos D1 R1 | `sketches/wemos_*` | 이전 Wi-Fi 구조 참고용, 현재 메인 흐름에서는 제외 |
 
 루트 폴더에는 통합 실행용 `.ino` 파일을 두지 않습니다. 실제 업로드 대상은 `sketches/` 아래의 보드별 `.ino` 파일이며, 루트의 `BOARD_UPLOAD_GUIDE.md`는 어떤 파일을 어느 보드에 업로드해야 하는지 안내합니다.
 
@@ -181,11 +180,8 @@ led/
 │   │   ├── uno_d8_servo_test/
 │   │   ├── uno_gate_no_lcd_test/
 │   │   ├── uno_gate_test/
-│   │   └── uno_i2c_scanner/
-│   ├── wemos_gateway/
-│   │   └── wemos_gateway.ino
-│   └── wemos_monitor/
-│       └── wemos_monitor.ino
+│   │   ├── uno_i2c_scanner/
+│   │   └── uno_slots_test/
 ├── docs/
 │   └── circuits/
 │       ├── arduino_uno_1_gate.svg
@@ -199,7 +195,6 @@ led/
 │   ├── parking_display.h
 │   └── parking_alert.h       # 이전 모듈화 구조 참고용
 ├── 요금 (NodeJs Server)/
-│   ├── fee_request.h
 │   └── fee-server/
 │       ├── package.json
 │       ├── package-lock.json
@@ -215,11 +210,9 @@ led/
 | `BOARD_UPLOAD_GUIDE.md` | 보드별 업로드 대상 안내 |
 | `sketches/uno_gate/uno_gate.ino` | 입구/출구 조도센서, 입구/출구 차단기, LCD 제어 |
 | `sketches/uno_slots/uno_slots.ino` | 주차칸 감지와 칸별 LED 제어 |
-| `sketches/wemos_gateway/wemos_gateway.ino` | 이전 Wi-Fi 게이트웨이 구조 참고용 |
-| `sketches/wemos_monitor/wemos_monitor.ino` | 이전 서버 모니터 구조 참고용 |
 | `docs/circuits/*.svg` | 보드별 회로도 |
 | `sketches/test/*` | 센서, LCD, 서보 분리 테스트용 스케치 |
-| `차단기 (Uno 1)/`, `주차칸 (Uno 2)/`, `요금 (NodeJs Server)/fee_request.h` | 이전 모듈화 구조에서 사용하던 참고용 헤더 |
+| `차단기 (Uno 1)/`, `주차칸 (Uno 2)/` | 기능별 모듈 참고용 헤더 |
 | `요금 (NodeJs Server)/fee-server/src/server.js` | Express API 서버 |
 | `요금 (NodeJs Server)/fee-server/src/feeCalculator.js` | 주차 요금 계산 로직 |
 
@@ -294,7 +287,7 @@ led/
 - 서버 상태 확인: `http://localhost:3000/serial/status`
 - 주차 세션 확인: `http://localhost:3000/parking/sessions`
 
-Wemos 관련 스케치는 포트 인식 불량이 잦아 현재 시연용 메인 흐름에서 제외했고, 이전 Wi-Fi 구조 참고용으로만 남겼습니다.
+현재 시연용 메인 흐름은 Arduino Uno 2대와 PC Node.js 서버만 사용합니다.
 
 ---
 
@@ -523,4 +516,4 @@ sketches/test/uno_slots_test/uno_slots_test.ino
 - `sketches/uno_slots` Arduino Uno 컴파일 완료
 - `요금 (NodeJs Server)/fee-server/src/server.js` Node.js 문법 확인 완료
 - `요금 (NodeJs Server)/fee-server` serialport 의존성 설치 완료
-- 한글 폴더명을 include하는 기존 통합 구조는 ESP8266 빌드 과정의 경로 인코딩 문제로 실패 확인
+- 한글, 공백, 괄호가 포함된 경로는 일부 빌드 환경에서 인코딩 문제가 날 수 있으므로 경로를 따옴표로 감싸서 사용

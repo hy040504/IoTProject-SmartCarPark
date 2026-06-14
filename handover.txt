@@ -80,10 +80,6 @@ sketches/uno_gate/uno_gate.ino
 - 이전 단일 보드 구조에서 사용하던 차단기 모듈이다.
 - 현재 실제 업로드 구조에서는 sketches/uno_gate/uno_gate.ino가 입구/출구 차단기를 직접 제어한다.
 
-요금 (NodeJs Server)/fee_request.h
-- 이전 Wemos Wi-Fi 구조에서 사용하던 HTTP 요청 참고용 헤더이다.
-- 현재 메인 구조에서는 Node.js 서버가 Uno 2개와 USB Serial로 직접 통신한다.
-
 요금 (NodeJs Server)/fee-server/src/server.js
 - Node.js Express 기반 요금 계산 서버이자 USB Serial Bridge이다.
 - Uno 1과 Uno 2의 COM 포트를 열고 ENTRY, VACATED, BARRIER_EXIT 이벤트를 처리한다.
@@ -96,7 +92,7 @@ sketches/uno_gate/uno_gate.ino
 
 docs/circuits/arduino_uno_1_gate.svg
 - Arduino Uno 1의 입구/출구 조도센서, LCD, 입구/출구 서보모터 배선을 정리한 회로도이다.
-- 현재 메인 구조에 맞게 Wemos 연결 없이 USB Serial로 Node.js 서버와 연결하는 형태로 작성되어 있다.
+- 현재 메인 구조에 맞게 USB Serial로 Node.js 서버와 연결하는 형태로 작성되어 있다.
 
 docs/circuits/arduino_uno_2_slots.svg
 - Arduino Uno 2의 주차칸 초음파센서 2개와 칸별 빨간/초록 LED 배선을 정리한 회로도이다.
@@ -192,10 +188,10 @@ Node.js 서버:
 - 현재 서버는 주차 기록을 메모리에 저장한다.
 - 서버 재시작 후에도 기록을 유지하려면 JSON 파일, SQLite, MySQL 등 저장소 연동이 필요하다.
 
-4) 한글 폴더명과 Arduino 컴파일 호환성
+4) 한글/공백 경로와 Arduino 컴파일 호환성
 - 현재 모듈 폴더는 요청에 따라 차단기 (Uno 1), 주차칸 (Uno 2), 요금 (NodeJs Server)로 정리되어 있다.
 - 공백과 괄호가 있으므로 터미널에서 경로를 사용할 때는 따옴표로 감싸야 한다.
-- Arduino CLI 1.5.1과 ESP8266 빌드 환경에서 한글 include 경로가 임시 빌드 폴더로 복사될 때 깨지는 문제가 확인되었다.
+- 일부 빌드 환경에서 한글 include 경로가 임시 빌드 폴더로 복사될 때 깨질 수 있다.
 - 실제 업로드 단계에서 include 경로 문제가 발생하면 폴더명을 barrier, parking, fee처럼 ASCII 이름으로 되돌리는 것이 가장 안전하다.
 
 9. GitHub 업로드 대상

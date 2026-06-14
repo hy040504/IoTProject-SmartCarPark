@@ -10,7 +10,7 @@
 
 Arduino IDE에서 각 스케치 폴더를 열어 해당 보드에 각각 업로드하면 됩니다.
 
-현재 메인 구조에서는 Wemos 보드를 사용하지 않습니다. `sketches/wemos_gateway`, `sketches/wemos_monitor`는 이전 Wi-Fi 구조 참고용입니다.
+현재 메인 구조는 Arduino Uno 2대와 PC Node.js 서버만 사용합니다. `sketches` 폴더에는 실제 업로드할 Uno 스케치와 테스트 스케치만 남겼습니다.
 
 ## 테스트용 스케치
 

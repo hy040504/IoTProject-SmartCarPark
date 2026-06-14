@@ -2,21 +2,17 @@
 #define PARKING_SLOTS_H
 
 #include <Arduino.h>
-#include "../요금 (NodeJs Server)/fee_request.h"
-#include "parking_display.h"
 
 const int SLOT_COUNT = 2;                       // 관리할 주차칸 개수
-const int SLOT_OCCUPIED_DISTANCE_CM = 5;        // 차량으로 판단할 최대 거리
+const int SLOT_OCCUPIED_DISTANCE_CM[SLOT_COUNT] = {8, 5}; // 주차칸별 차량 감지 거리
 const unsigned long SLOT_ECHO_TIMEOUT_US = 30000; // 초음파 응답 대기 최대 시간
 
-const int SLOT_TRIG_PINS[SLOT_COUNT] = {D6, D7};   // 주차칸별 초음파 송신 핀
-const int SLOT_ECHO_PINS[SLOT_COUNT] = {D3, D4};   // 주차칸별 초음파 수신 핀
-const int SLOT_RED_LED_PINS[SLOT_COUNT] = {D9, D11};   // 주차칸별 점유 표시 LED 핀
-const int SLOT_GREEN_LED_PINS[SLOT_COUNT] = {D10, D12}; // 주차칸별 빈자리 표시 LED 핀
+const int SLOT_TRIG_PINS[SLOT_COUNT] = {4, 13};     // 주차칸별 초음파 송신 핀
+const int SLOT_ECHO_PINS[SLOT_COUNT] = {5, 12};     // 주차칸별 초음파 수신 핀
+const int SLOT_RED_LED_PINS[SLOT_COUNT] = {8, 10};  // 주차칸별 점유 표시 LED 핀
+const int SLOT_GREEN_LED_PINS[SLOT_COUNT] = {9, 11}; // 주차칸별 빈자리 표시 LED 핀
 
 static bool previousSlotOccupied[SLOT_COUNT] = {false, false};
-static int pendingExitSlotId = 0;
-static bool previousBarrierExitDetected = false;
 
 /**
  * 주차칸 초음파 센서와 상태 LED를 초기화한다.
@@ -59,7 +55,7 @@ inline float readSlotDistanceCm(int slotIndex) {
  */
 inline bool isSlotOccupied(int slotIndex) {
   float distanceCm = readSlotDistanceCm(slotIndex);
-  return distanceCm > 0 && distanceCm <= SLOT_OCCUPIED_DISTANCE_CM;
+  return distanceCm > 0 && distanceCm <= SLOT_OCCUPIED_DISTANCE_CM[slotIndex];
 }
 
 /**
@@ -90,24 +86,19 @@ inline int countEmptySlots() {
 }
 
 /**
- * 차량이 빠진 주차칸을 출차 대기 상태로 저장한다.
- * @param {int} slotId - 차량이 빠진 주차칸 번호
+ * Node.js 서버가 처리할 주차칸 상태 변경 이벤트를 Serial로 전송한다.
+ * @param {const char*} eventName - ENTRY 또는 VACATED 이벤트 이름
+ * @param {int} slotId - 주차칸 번호
  * @returns {void} 반환값 없음
  */
-inline void markPendingExitSlot(int slotId) {
-  pendingExitSlotId = slotId;
+inline void sendSlotSerialEvent(const char* eventName, int slotId) {
+  Serial.print(eventName);
+  Serial.print(",");
+  Serial.println(slotId);
 }
 
 /**
- * 출차 확정을 기다리는 주차칸이 있는지 확인한다.
- * @returns {bool} 출차 대기 중인 주차칸이 있으면 true, 아니면 false
- */
-inline bool hasPendingExitSlot() {
-  return pendingExitSlotId > 0;
-}
-
-/**
- * 주차칸 점유 변화에 따라 입차와 출차 대기 이벤트를 처리한다.
+ * 주차칸 점유 변화에 따라 Node.js 서버로 보낼 Serial 이벤트를 처리한다.
  * @returns {void} 반환값 없음
  */
 inline void updateParkingSlots() {
@@ -118,43 +109,15 @@ inline void updateParkingSlots() {
     updateSlotLed(index, occupied);
 
     if (occupied && !previousSlotOccupied[index]) {
-      sendVehicleEntryRequest(slotId);
+      sendSlotSerialEvent("ENTRY", slotId);
     }
 
     if (!occupied && previousSlotOccupied[index]) {
-      markPendingExitSlot(slotId);
+      sendSlotSerialEvent("VACATED", slotId);
     }
 
     previousSlotOccupied[index] = occupied;
   }
-}
-
-/**
- * 차단기 감지까지 확인된 출차 이벤트를 요금 서버에 전송한다.
- * @param {bool} barrierExitDetected - 차단기에서 차량 통과가 감지됐는지 여부
- * @returns {bool} 출차 요금 계산이 완료되면 true, 아니면 false
- */
-inline bool confirmPendingExitAtBarrier(bool barrierExitDetected) {
-  bool exitConfirmed = hasPendingExitSlot() && barrierExitDetected && !previousBarrierExitDetected;
-
-  previousBarrierExitDetected = barrierExitDetected;
-
-  if (!exitConfirmed) {
-    return false;
-  }
-
-  int slotId = pendingExitSlotId;
-  String response = sendVehicleExitRequest(slotId);
-  long fee = extractFeeFromResponse(response);
-
-  pendingExitSlotId = 0;
-
-  if (fee < 0) {
-    return false;
-  }
-
-  showParkingFeeMessage(slotId, fee);
-  return true;
 }
 
 #endif
