@@ -326,7 +326,10 @@ body.dark-theme .slot-monitor-address {
 
 body.dark-theme .slot-monitor-header h4,
 body.dark-theme .slot-table-head,
-body.dark-theme .slot-table-row {
+body.dark-theme .slot-table-row,
+body.dark-theme .history-monitor-header h4,
+body.dark-theme .history-table-head,
+body.dark-theme .history-table-row {
   color: #e7f4ff;
 }
 
@@ -335,6 +338,20 @@ body.dark-theme .slot-table-head {
 }
 
 body.dark-theme .slot-table-row {
+  border-bottom-color: rgba(156, 192, 220, 0.08);
+}
+
+body.dark-theme .history-monitor-shell {
+  background: linear-gradient(180deg, #152235, #101d2f);
+  border-color: #2a3c57;
+  box-shadow: inset 0 0 0 1px rgba(107, 141, 180, 0.08);
+}
+
+body.dark-theme .history-table-head {
+  border-bottom-color: rgba(156, 192, 220, 0.1);
+}
+
+body.dark-theme .history-table-row {
   border-bottom-color: rgba(156, 192, 220, 0.08);
 }
 
@@ -660,6 +677,82 @@ body.dark-theme .slot-fee-cell {
 
 .slot-table-row:last-child {
   border-bottom: 0;
+}
+
+.history-monitor-shell {
+  margin-top: 18px;
+  overflow: hidden;
+  border: 1px solid #bfd9ee;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #f6fbff, #eef8ff);
+}
+
+.history-monitor-body {
+  padding: 20px 18px 14px;
+}
+
+.history-monitor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.history-monitor-header h4 {
+  font-size: 28px;
+  color: var(--blue-strong);
+}
+
+.history-live-badge {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(66, 165, 245, 0.14);
+  color: var(--blue-strong);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.history-table {
+  width: 100%;
+}
+
+.history-table-head,
+.history-table-row {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr 1fr 1fr;
+  gap: 18px;
+  align-items: center;
+}
+
+.history-table-head {
+  padding: 0 10px 14px;
+  border-bottom: 1px solid rgba(18, 49, 77, 0.08);
+  color: var(--blue);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.history-table-body {
+  display: grid;
+}
+
+.history-table-row {
+  padding: 18px 10px;
+  border-bottom: 1px solid rgba(18, 49, 77, 0.06);
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.history-table-row.empty {
+  grid-template-columns: 1fr;
+}
+
+.history-empty-message {
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .slot-id-cell {
@@ -1004,6 +1097,55 @@ body.dark-theme .slot-fee-cell {
 
   .slot-table-row span:nth-child(5)::before {
     content: "발생 요금";
+  }
+
+  .history-monitor-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .history-monitor-header h4 {
+    font-size: 22px;
+  }
+
+  .history-table-head {
+    display: none;
+  }
+
+  .history-table-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 16px 6px;
+    font-size: 16px;
+  }
+
+  .history-table-row span::before {
+    display: inline-block;
+    min-width: 86px;
+    margin-right: 8px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .history-table-row span:nth-child(1)::before {
+    content: "주차칸";
+  }
+
+  .history-table-row span:nth-child(2)::before {
+    content: "입차 시각";
+  }
+
+  .history-table-row span:nth-child(3)::before {
+    content: "출차 시각";
+  }
+
+  .history-table-row span:nth-child(4)::before {
+    content: "주차 시간";
+  }
+
+  .history-table-row span:nth-child(5)::before {
+    content: "정산 요금";
   }
 
   .slot-index {

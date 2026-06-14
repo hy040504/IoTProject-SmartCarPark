@@ -8,6 +8,7 @@ const { calculateParkingFee } = require('./feeCalculator');
 const app = express();
 app.use(express.json());
 const port = Number(process.env.PORT || 3000);
+const host = String(process.env.HOST || '0.0.0.0').trim();
 const gateSerialPath = process.env.GATE_SERIAL_PORT || 'COM3';
 const slotSerialPath = process.env.SLOT_SERIAL_PORT || 'COM5';
 const lcdSerialPath = process.env.LCD_SERIAL_PORT || 'COM7';
@@ -23,6 +24,7 @@ const adminAccounts = new Map([
 const parkingSessions = new Map();
 const slotOccupied = new Map();
 const pendingExitSlots = [];
+const parkingHistory = [];
 const adminSessions = new Map();
 const adminStreamClients = new Set();
 
@@ -103,7 +105,7 @@ function checkoutVehicle(slotId) {
   parkingSessions.delete(slotId);
   slotOccupied.set(slotId, false);
 
-  return {
+  const receipt = {
     slotId,
     enteredAt: session.enteredAt.toISOString(),
     exitedAt: exitedAt.toISOString(),
@@ -111,6 +113,13 @@ function checkoutVehicle(slotId) {
     parkedMinutes,
     fee,
   };
+
+  parkingHistory.unshift(receipt);
+  if (parkingHistory.length > 30) {
+    parkingHistory.length = 30;
+  }
+
+  return receipt;
 }
 
 /**
@@ -272,7 +281,7 @@ function clearAdminSessionCookie(res) {
 
 /**
  * 관리자 페이지에 보낼 실시간 상태를 만든다.
- * @returns {{now: string, totalSlots: number, occupiedSlots: number, emptySlots: number, slots: Array<object>, pendingExitSlots: string[]}} 상태 객체
+ * @returns {{now: string, totalSlots: number, occupiedSlots: number, emptySlots: number, slots: Array<object>, pendingExitSlots: string[], history: Array<object>}} 상태 객체
  */
 function buildAdminState() {
   const now = new Date();
@@ -308,6 +317,7 @@ function buildAdminState() {
     emptySlots: countEmptySlots(),
     slots,
     pendingExitSlots: [...pendingExitSlots],
+    history: parkingHistory.map((item) => ({ ...item })),
   };
 }
 
@@ -756,11 +766,11 @@ function handleAdminState(req, res) {
  * @returns {void} 반환값 없음
  */
 function handleServerStarted() {
-  console.log(`Parking fee server listening on http://localhost:${port}`);
+  console.log(`Parking fee server listening on http://${host}:${port}`);
   console.log(`Gate serial: ${gateSerialPath}`);
   console.log(`Slot serial: ${slotSerialPath}`);
   console.log(`LCD serial: ${lcdSerialPath}`);
-  console.log(`Admin page: http://localhost:${port}/admin`);
+  console.log(`Admin page: http://${host}:${port}/admin`);
 }
 
 gateConnection = createSerialConnection(gateSerialPath, handleGateLine);
@@ -797,4 +807,4 @@ app.get('/parking/exit', handleVehicleExit);
 app.get('/parking/sessions', handleActiveSessions);
 app.get('/serial/status', handleSerialStatus);
 
-app.listen(port, handleServerStarted);
+app.listen(port, host, handleServerStarted);

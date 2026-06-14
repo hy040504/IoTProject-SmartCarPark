@@ -180,6 +180,7 @@ Arduino Uno 3: LCD 전광판
 | Online 상태 표시 | 서버 SSE 연결 상태를 실시간 표시 |
 | 테마 전환 | Light / Dark 모드 전환 |
 | 주차칸 상태 블록 | 테이블형 UI로 주차칸 상태 표시 |
+| 주차 기록 블록 | 최근 출차 정산 기록을 세션 메모리에 유지 |
 | 진입 시간 / 경과 시간 | 각 차량의 실시간 체류 시간 표시 |
 | 발생 요금 | 화면에서 동적으로 증가하는 요금 표시 효과 |
 | 요금 기준 안내 | 기본요금과 추가요금 정책 안내 |
@@ -381,14 +382,20 @@ http://localhost:3000
 http://localhost:3000/admin
 ```
 
-같은 Wi-Fi/LAN 내부 접속 예시:
+Cloudflare Tunnel 공개 URL:
 
 ```text
-관리자 페이지: http://172.29.74.134:3000/admin
-서버 상태: http://172.29.74.134:3000/serial/status
+start_fee_server.bat 실행 후
+cloudflare_tunnel_url.txt 파일에 현재 공개 URL이 저장됨
 ```
 
-> 위 IP는 현재 실행 PC의 내부망 주소 기준입니다. 네트워크가 바뀌면 함께 바뀔 수 있습니다.
+Cloudflare Tunnel 로그 파일:
+
+```text
+cloudflare_tunnel.out.log
+cloudflare_tunnel.err.log
+cloudflare_tunnel_url.txt
+```
 
 서버 실행 전 포트를 지정하려면 PowerShell에서 아래처럼 실행합니다.
 
@@ -400,6 +407,20 @@ npm start
 ```
 
 Node.js 서버가 COM 포트를 열고 있는 동안에는 Arduino IDE 업로드가 실패할 수 있습니다. 업로드할 때는 서버를 먼저 종료합니다.
+
+### 1-1. 통합 실행 배치 파일
+
+```text
+start_fee_server.bat
+```
+
+이 배치 파일은 아래 순서로 자동 실행합니다.
+
+1. Uno 1/2/3 스케치 컴파일
+2. Uno 1/2/3 업로드
+3. Node.js 서버 실행
+4. Cloudflare quick tunnel 실행
+5. 공개 URL을 로그 파일과 `cloudflare_tunnel_url.txt`에 저장
 
 ### 2. Arduino 업로드
 

@@ -10,6 +10,7 @@ const emptyCount = document.getElementById('emptyCount');
 const totalCount = document.getElementById('totalCount');
 const lastUpdated = document.getElementById('lastUpdated');
 const slotList = document.getElementById('slotList');
+const historyList = document.getElementById('historyList');
 const slotLiveBadge = document.getElementById('slotLiveBadge');
 const currentUser = document.getElementById('currentUser');
 
@@ -155,12 +156,40 @@ function renderSlots(state) {
   });
 }
 
+function renderHistory(state) {
+  historyList.innerHTML = '';
+
+  if (!state.history || state.history.length === 0) {
+    const emptyItem = document.createElement('div');
+    emptyItem.className = 'history-table-row empty';
+    emptyItem.innerHTML = `
+      <span class="history-empty-message">아직 출차 정산 기록이 없습니다.</span>
+    `;
+    historyList.appendChild(emptyItem);
+    return;
+  }
+
+  state.history.forEach((record) => {
+    const item = document.createElement('div');
+    item.className = 'history-table-row';
+    item.innerHTML = `
+      <span class="slot-id-cell">주차칸 ${record.slotId}</span>
+      <span>${formatTimeOnly(record.enteredAt)}</span>
+      <span>${formatTimeOnly(record.exitedAt)}</span>
+      <span>${formatDurationClock(record.parkedSeconds)}</span>
+      <span class="slot-fee-cell">${record.fee.toLocaleString('ko-KR')}원</span>
+    `;
+    historyList.appendChild(item);
+  });
+}
+
 function renderState(state) {
   occupiedCount.textContent = String(state.occupiedSlots);
   emptyCount.textContent = String(state.emptySlots);
   totalCount.textContent = String(state.totalSlots);
   lastUpdated.textContent = formatDateTime(state.now);
   renderSlots(state);
+  renderHistory(state);
 }
 
 async function loadState() {
