@@ -262,12 +262,62 @@ led/
 
 ## 🖼️ 회로도
 
-- [Arduino Uno 1 회로도](docs/circuits/arduino_uno_1_gate.svg)
-- [Arduino Uno 2 회로도](docs/circuits/arduino_uno_2_slots.svg)
-- [Arduino Uno 3 회로도](docs/circuits/arduino_uno_3_lcd.svg)
-- [Node.js Serial Bridge 회로도](docs/circuits/node_serial_bridge.svg)
+### Arduino Uno 1: 입구/출구 차단기 제어
 
-현재 시연용 메인 흐름은 **Arduino Uno 3대 + PC Node.js 서버 + 웹 관리자 페이지**를 사용합니다.
+아래 회로도는 `sketches/uno_gate/uno_gate.ino` 기준입니다.
+
+![Arduino Uno 1 회로도](docs/circuits/arduino_uno_1_gate.svg)
+
+포함된 연결:
+
+- 입구 조도센서: `A0`
+- 출구 조도센서: `A1`
+- 입구 차단기 서보모터: `D9`
+- 출구 차단기 서보모터: `D8`
+- Node.js Serial Bridge 통신: USB Serial `9600 baud`
+
+### Arduino Uno 2: 주차칸 감지 및 LED 표시
+
+아래 회로도는 `sketches/uno_slots/uno_slots.ino` 기준입니다.
+
+![Arduino Uno 2 회로도](docs/circuits/arduino_uno_2_slots.svg)
+
+포함된 연결:
+
+- 1번 칸 초음파센서: `D4(TRIG)`, `D5(ECHO)`
+- 2번 칸 초음파센서: `D13(TRIG)`, `D12(ECHO)`
+- 1번 칸 LED: 빨강 `D8`, 초록 `D9`
+- 2번 칸 LED: 빨강 `D10`, 초록 `D11`
+- Node.js Serial Bridge 통신: USB Serial `9600 baud`
+
+### Arduino Uno 3: 입구/출구 LCD 전광판
+
+아래 회로도는 `sketches/uno_lcd/uno_lcd.ino` 기준입니다.
+
+![Arduino Uno 3 회로도](docs/circuits/arduino_uno_3_lcd.svg)
+
+포함된 연결:
+
+- 입구 LCD: I2C 주소 `0x27`, `A4(SDA)`, `A5(SCL)`
+- 출구 LCD: I2C 주소 `0x3F`, `A4(SDA)`, `A5(SCL)`
+- Node.js Serial Bridge 통신: USB Serial `9600 baud`
+
+### Node.js Serial Bridge: 요금 서버와 보드 연결
+
+아래 회로도는 `요금 (NodeJs Server)/fee-server/src/server.js` 기준입니다.
+
+![Node.js Serial Bridge 회로도](docs/circuits/node_serial_bridge.svg)
+
+포함된 연결:
+
+- Uno 1 USB Serial: `GATE_SERIAL_PORT`, 기본 `COM3`
+- Uno 2 USB Serial: `SLOT_SERIAL_PORT`, 기본 `COM5`
+- Uno 3 USB Serial: `LCD_SERIAL_PORT`, 기본 `COM7`
+- 통신 속도: `9600 baud`
+- 서버 상태 확인: `http://localhost:3000/serial/status`
+- 주차 세션 확인: `http://localhost:3000/parking/sessions`
+
+현재 시연용 메인 흐름은 Arduino Uno 3대와 PC Node.js 서버를 사용합니다.
 
 ---
 
