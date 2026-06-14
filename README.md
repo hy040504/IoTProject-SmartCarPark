@@ -521,10 +521,10 @@ start_fee_server.bat
 
 ### 제작 과정 사진
 
-- [전체 시연 영상](<https://youtu.be/KgurgbUI1z8>)
-- [LCD 모니터 영상](<https://youtu.be/0cOuXOLxFoA>)
-- [관리자 페이지 영상](<https://youtu.be/Z6LwPML_taE>)
-- [모형 시연 영상](<https://vimeo.com/1201190790?share=copy&fl=sv&fe=ci>)
+- [전체 시연 영상](<https://vimeo.com/1201208827>)
+- [LCD 모니터 영상](<https://vimeo.com/1201208829>)
+- [관리자 페이지 영상](<https://vimeo.com/1201208828>)
+- [모형 시연 영상](<https://vimeo.com/1201190790>)
 
 ---
 
