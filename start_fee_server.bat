@@ -8,12 +8,9 @@ set "GATE_SERIAL_PORT=COM3"
 set "SLOT_SERIAL_PORT=COM5"
 set "LCD_SERIAL_PORT=COM7"
 set "SERIAL_BAUD_RATE=9600"
-set "HOST=127.0.0.1"
-set "CLOUDFLARED_EXE=%LOCALAPPDATA%\Microsoft\WinGet\Links\cloudflared.exe"
-set "CLOUDFLARE_LOG=%ROOT_DIR%cloudflare_tunnel.out.log"
-set "CLOUDFLARE_ERR_LOG=%ROOT_DIR%cloudflare_tunnel.err.log"
-set "CLOUDFLARE_URL_FILE=%ROOT_DIR%cloudflare_tunnel_url.txt"
-set "CLOUDFLARE_URL="
+set "HOST=0.0.0.0"
+set "TAILSCALE_IP="
+set "TAILSCALE_URL_FILE=%ROOT_DIR%tailscale_admin_url.txt"
 set "SERVER_DIR="
 set "UNO_GATE_SKETCH=%ROOT_DIR%sketches\uno_gate"
 set "UNO_SLOTS_SKETCH=%ROOT_DIR%sketches\uno_slots"
@@ -29,6 +26,16 @@ if "%SERVER_DIR%"=="" (
   echo Cannot find fee-server folder.
   pause
   exit /b 1
+)
+
+for /f "usebackq delims=" %%I in (`tailscale ip -4 2^>nul`) do (
+  if not defined TAILSCALE_IP set "TAILSCALE_IP=%%I"
+)
+
+if not defined TAILSCALE_IP (
+  for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -eq 'Tailscale' } | Select-Object -First 1 -ExpandProperty IPAddress)"`) do (
+    if not defined TAILSCALE_IP set "TAILSCALE_IP=%%I"
+  )
 )
 
 where arduino-cli >nul 2>nul
@@ -69,18 +76,9 @@ echo LCD_SERIAL_PORT=%LCD_SERIAL_PORT%
 echo SERIAL_BAUD_RATE=%SERIAL_BAUD_RATE%
 echo HOST=%HOST%
 echo PORT=%PORT%
-echo CLOUDFLARED_EXE=%CLOUDFLARED_EXE%
-echo CLOUDFLARE_LOG=%CLOUDFLARE_LOG%
-echo CLOUDFLARE_ERR_LOG=%CLOUDFLARE_ERR_LOG%
-echo CLOUDFLARE_URL_FILE=%CLOUDFLARE_URL_FILE%
+echo TAILSCALE_IP=%TAILSCALE_IP%
+echo TAILSCALE_URL_FILE=%TAILSCALE_URL_FILE%
 echo.
-
-if not exist "%CLOUDFLARED_EXE%" (
-  echo cloudflared not found: %CLOUDFLARED_EXE%
-  echo Install Cloudflare.cloudflared first.
-  pause
-  exit /b 1
-)
 
 echo [1/6] Compiling Uno 1 sketch...
 call arduino-cli compile --fqbn %FQBN% "%UNO_GATE_SKETCH%"
@@ -127,31 +125,25 @@ if not exist "node_modules" (
 echo.
 echo Upload completed. Starting parking fee server...
 echo Local URL: http://localhost:%PORT%/admin
-echo Cloudflare tunnel logs will be written to:
-echo   %CLOUDFLARE_LOG%
-echo   %CLOUDFLARE_ERR_LOG%
+if defined TAILSCALE_IP (
+  echo Tailscale URL: http://%TAILSCALE_IP%:%PORT%/admin
+) else (
+  echo Tailscale IP was not detected.
+)
 echo.
+
 start "Smart Car Park Server" cmd /k "cd /d ""%SERVER_DIR%"" && set PORT=%PORT% && set HOST=%HOST% && set GATE_SERIAL_PORT=%GATE_SERIAL_PORT% && set SLOT_SERIAL_PORT=%SLOT_SERIAL_PORT% && set LCD_SERIAL_PORT=%LCD_SERIAL_PORT% && set SERIAL_BAUD_RATE=%SERIAL_BAUD_RATE% && npm start"
 
 timeout /t 5 >nul
-if exist "%CLOUDFLARE_LOG%" del /f /q "%CLOUDFLARE_LOG%"
-if exist "%CLOUDFLARE_ERR_LOG%" del /f /q "%CLOUDFLARE_ERR_LOG%"
-if exist "%CLOUDFLARE_URL_FILE%" del /f /q "%CLOUDFLARE_URL_FILE%"
-taskkill /IM cloudflared.exe /F >nul 2>nul
-start "Smart Car Park Cloudflare Tunnel" cmd /c """%CLOUDFLARED_EXE%"" tunnel --url http://127.0.0.1:%PORT% --no-autoupdate 1>""%CLOUDFLARE_LOG%"" 2>""%CLOUDFLARE_ERR_LOG%"""
-timeout /t 8 >nul
-for /f "usebackq delims=" %%U in (`powershell -NoProfile -Command "$logPath = '%CLOUDFLARE_ERR_LOG%'; if (Test-Path $logPath) { $match = Select-String -Path $logPath -Pattern 'https://[a-zA-Z0-9.-]*trycloudflare.com' | Select-Object -First 1; if ($match) { $url = [regex]::Match($match.Line, 'https://[a-zA-Z0-9.-]*trycloudflare.com').Value; if ($url) { Write-Output $url } } }"`) do (
-  set "CLOUDFLARE_URL=%%U"
-)
-if defined CLOUDFLARE_URL (
-  > "%CLOUDFLARE_URL_FILE%" echo %CLOUDFLARE_URL%
-  echo Public URL: %CLOUDFLARE_URL%
-  echo Public URL saved to: %CLOUDFLARE_URL_FILE%
+
+if defined TAILSCALE_IP (
+  > "%TAILSCALE_URL_FILE%" echo http://%TAILSCALE_IP%:%PORT%/admin
+  echo Tailscale URL saved to: %TAILSCALE_URL_FILE%
+  start "" "http://%TAILSCALE_IP%:%PORT%/admin"
 ) else (
-  echo Cloudflare public URL was not detected yet.
-  echo Check log file: %CLOUDFLARE_ERR_LOG%
+  echo Tailscale URL file was not created because Tailscale IP was not detected.
+  start "" "http://localhost:%PORT%/admin"
 )
-start "" "http://localhost:%PORT%/admin"
 
 popd
 pause

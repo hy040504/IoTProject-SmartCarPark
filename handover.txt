@@ -6,7 +6,7 @@
 이 프로젝트는 Arduino Uno 3대와 Node.js 서버를 이용해 스마트 주차장의 입구, 주차칸, 출구 LCD를 분리 구현한 실습 프로젝트다.
 초기에는 Uno 3에서 입구 LCD와 출구 LCD를 모두 처리했지만, 현재는 출구 LCD만 남기고 입구 LCD 로직을 제거했다.
 프로젝트 방향도 입구 안내보다 출차 요금 표시와 상태 확인에 맞춰 단순화했고, 최근에는 웹 기반 관리자 페이지를 추가해 실시간 운영 화면까지 포함하는 구조로 확장했다.
-외부 접속 방식도 같은 네트워크 내부 접속보다는 Cloudflare Tunnel 기반 공개 URL 방식으로 전환했다.
+외부 접속 방식도 공개 터널보다 Tailscale 네트워크 기반 접속 방식으로 전환했다.
 
 2. 현재 구조
 
@@ -65,8 +65,8 @@
 - `start_fee_server.bat`
   - Uno 1/2/3 자동 컴파일 및 업로드
   - Node.js 서버 실행
-  - Cloudflare quick tunnel 실행
-  - 공개 URL을 `cloudflare_tunnel_url.txt`에 저장
+  - Tailscale IP 확인
+  - 접속 URL을 `tailscale_admin_url.txt`에 저장
 
 6. 테스트 스케치
 
@@ -93,12 +93,9 @@
 
 9. 외부 접속 방식
 
-- 현재 외부 접속은 Cloudflare quick tunnel 기준
-- `start_fee_server.bat` 실행 후 공개 URL이 생성됨
-- URL은 `cloudflare_tunnel_url.txt`에 저장됨
-- 관련 로그:
-  - `cloudflare_tunnel.out.log`
-  - `cloudflare_tunnel.err.log`
+- 현재 외부 접속은 Tailscale 등록 기기 기준
+- `start_fee_server.bat` 실행 후 현재 기기의 Tailscale IP를 확인함
+- 접속 주소는 `tailscale_admin_url.txt`에 저장됨
 
 10. 회로도
 

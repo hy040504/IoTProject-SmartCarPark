@@ -382,19 +382,17 @@ http://localhost:3000
 http://localhost:3000/admin
 ```
 
-Cloudflare Tunnel 공개 URL:
+Tailscale 관리자 페이지 URL:
 
 ```text
 start_fee_server.bat 실행 후
-cloudflare_tunnel_url.txt 파일에 현재 공개 URL이 저장됨
+tailscale_admin_url.txt 파일에 현재 접속 URL이 저장됨
 ```
 
-Cloudflare Tunnel 로그 파일:
+Tailscale URL 파일:
 
 ```text
-cloudflare_tunnel.out.log
-cloudflare_tunnel.err.log
-cloudflare_tunnel_url.txt
+tailscale_admin_url.txt
 ```
 
 서버 실행 전 포트를 지정하려면 PowerShell에서 아래처럼 실행합니다.
@@ -419,8 +417,8 @@ start_fee_server.bat
 1. Uno 1/2/3 스케치 컴파일
 2. Uno 1/2/3 업로드
 3. Node.js 서버 실행
-4. Cloudflare quick tunnel 실행
-5. 공개 URL을 로그 파일과 `cloudflare_tunnel_url.txt`에 저장
+4. Tailscale IP 확인
+5. 접속 URL을 `tailscale_admin_url.txt`에 저장하고 해당 주소로 브라우저 실행
 
 ### 2. Arduino 업로드
 
