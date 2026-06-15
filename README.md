@@ -67,8 +67,8 @@ Arduino Uno 3: LCD 전광판
 
 | 이름 | 학번 | 역할 |
 | --- | --- | --- |
-| 연승현 | 202311420 | 하드웨어 구성, 회로 연결, 프로젝트 구현 및 시연 정리 |
-| 장기환 | 202311438 | 서버 연동, 관리자 페이지, 문서 정리 및 발표자료 구성 |
+| 연승현 | 202311420 | 아두이노 회로도 설계, 관리자 페이지 및 서버 구현, 전체 프로젝트 구조 설계 |
+| 장기환 | 202311438 | 아두이노 회로 직접 구현, 주차장 모형 디자인, 발표 자료 제작 |
 
 ---
 
@@ -297,7 +297,7 @@ led/
 - 2번 칸 LED: 빨강 `D10`, 초록 `D11`
 - Node.js Serial Bridge 통신: USB Serial `9600 baud`
 
-### Arduino Uno 3: 입구/출구 LCD 전광판
+### Arduino Uno 3: 출구 LCD 전광판
 
 아래 회로도는 `sketches/uno_lcd/uno_lcd.ino` 기준입니다.
 
@@ -305,8 +305,8 @@ led/
 
 포함된 연결:
 
-- 입구 LCD: I2C 주소 `0x27`, `A4(SDA)`, `A5(SCL)`
-- 출구 LCD: I2C 주소 `0x3F`, `A4(SDA)`, `A5(SCL)`
+- 출구 LCD: I2C `A4(SDA)`, `A5(SCL)`
+- LCD 주소 자동 감지: `0x27` 또는 `0x3F`
 - Node.js Serial Bridge 통신: USB Serial `9600 baud`
 
 ### Node.js Serial Bridge: 요금 서버와 보드 연결
